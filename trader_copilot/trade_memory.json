@@ -1,0 +1,1094 @@
+[
+  {
+    "setup_id": "breakout_retest_001",
+    "instrument": "EURCAD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-04",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "Descending bearish channel with rising corrective wedge; supply zone overhead; OB/FVG visible at breakout; clean retest and sharp sell-off to lower boundary."
+  },
+  {
+    "setup_id": "breakout_retest_002",
+    "instrument": "EURCAD",
+    "timeframe": "1h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-19",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "Two sequential setups on same chart; second rising wedge inside bearish channel breaks down from supply OB; after confirms two clean retest entries both reaching target."
+  },
+  {
+    "setup_id": "breakout_retest_003",
+    "instrument": "EURAUD",
+    "timeframe": "1h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-11-28",
+    "session": "new_york",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "EURAUD with hookpoint label at channel origin; rising wedge corrective inside bearish channel reaching resistance; OB/supply zone at entry; after confirms large bearish move into demand zone."
+  },
+  {
+    "setup_id": "breakout_retest_004",
+    "instrument": "EURAUD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "buy",
+    "date": "2025-12-11",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "moderate",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "B",
+    "filename_notes": "standard before/after",
+    "vision_notes": "Bearish descending channel; falling wedge at channel low near demand zones; 90% rule at top; after confirms bullish breakout with demand OB retest before rally."
+  },
+  {
+    "setup_id": "breakout_retest_005",
+    "instrument": "EURAUD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "buy",
+    "date": "2026-01-05",
+    "session": "asian",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "Bearish descending channel; 4H demand zone at bottom acts as OB; small corrective wedge breaks bullish; after shows demand OB retest and strong rally toward 90% rule level."
+  },
+  {
+    "setup_id": "breakout_retest_006",
+    "instrument": "EURUSD",
+    "timeframe": "15m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-08",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "EURUSD 15M; bullish impulse then bearish structure with rising corrective wedge; B/CH labels visible; supply zone overhead; after shows clean wedge break, retest of OB at supply, sharp drop to demand."
+  },
+  {
+    "setup_id": "breakout_retest_007",
+    "instrument": "GBPCAD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-20",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "GBPCAD dark-theme chart; bearish descending channel with rising corrective wedge; supply zone and OB clearly marked; after shows massive single candle displacement down to demand zone target."
+  },
+  {
+    "setup_id": "breakout_retest_008",
+    "instrument": "AUDCAD",
+    "timeframe": "1h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-15",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "AUDCAD ascending then bearish structure; falling wedge forms at top near supply; 90% rule at channel low; after confirms OB retest at supply and extended sell to lower boundary."
+  },
+  {
+    "setup_id": "breakout_retest_009",
+    "instrument": "AUDCAD",
+    "timeframe": "30m",
+    "pattern_type": "cup_and_handle_breakout_retest",
+    "direction": "buy",
+    "date": "2026-03-08",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": false,
+      "body_to_wick_ratio": "moderate",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": false
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": false,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "B",
+    "filename_notes": "cup and handle pattern",
+    "vision_notes": "Dark-theme chart; bearish descending market forms cup shape; handle forms at demand OB; after shows bullish breakout from handle retest and strong rally through the entire measured move target."
+  },
+  {
+    "setup_id": "breakout_retest_010",
+    "instrument": "CADJPY",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-02",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "CADJPY with hookpoint label; two sequential structures; second rising wedge inside bearish channel breaks down from supply OB; after confirms retest at supply zone and sell to demand."
+  },
+  {
+    "setup_id": "breakout_retest_011",
+    "instrument": "CADJPY",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-05",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "CADJPY bearish channel with descending corrective wedge; supply zone labeled; horizontal 90% rule line extends far right; after confirms breakout from OB retest with sharp sell to TP level."
+  },
+  {
+    "setup_id": "breakout_retest_012",
+    "instrument": "GBPAUD",
+    "timeframe": "2h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-11-28",
+    "session": "london",
+    "outcome": "invalid",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": false,
+      "wick_only": true
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": null,
+      "retest_depth_percent": null,
+      "ob_or_fvg_present_at_retest": false
+    },
+    "displacement": {
+      "single_large_body_candle": false,
+      "body_to_wick_ratio": "low",
+      "covers_significant_target_distance": false
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": false,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": false,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "C",
+    "filename_notes": "no retest=invalid / structure broke no ob nor fvg = no retest = no entry",
+    "vision_notes": "GBPAUD 2H; bearish wedge formed but structure broke without leaving OB or FVG; no valid retest level formed; educational example of what does NOT qualify as an entry."
+  },
+  {
+    "setup_id": "breakout_retest_013",
+    "instrument": "EURNZD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-05",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "EURNZD; ascending bearish channel with rising wedge at top; OB and supply zone marked; 90% rule at bottom; after shows wedge break, clean retest of OB, and strong sell-off reaching TP."
+  },
+  {
+    "setup_id": "breakout_retest_014",
+    "instrument": "USDJPY",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-05",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": true,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": true,
+      "dots_marked_on_chart": true,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "head and shoulder = sniper entry",
+    "vision_notes": "USDJPY; bearish channel with rising wedge; three blue dots mark H&S pattern at the retest zone; supply zone and 90% rule labeled; after shows sniper precision retest of OB and sharp sell."
+  },
+  {
+    "setup_id": "breakout_retest_015",
+    "instrument": "USDCAD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-19",
+    "session": "new_york",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": false,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "USDCAD dark-theme; bullish impulse followed by bearish structure with falling corrective wedge; X marker at hookpoint; after confirms wedge break, OB retest, and clean sell to TP."
+  },
+  {
+    "setup_id": "breakout_retest_016",
+    "instrument": "AUDNZD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-08",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "AUDNZD bearish descending channel; rising corrective wedge breaks down from supply OB; 90% rule marked; after confirms retest and sell-off with price closing at lower channel boundary."
+  },
+  {
+    "setup_id": "breakout_retest_017",
+    "instrument": "AUDNZD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-11",
+    "session": "london",
+    "outcome": "loss",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": false,
+      "wick_only": true
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "outside range",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": false,
+      "body_to_wick_ratio": "low",
+      "covers_significant_target_distance": false
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": false,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "C",
+    "filename_notes": "did not break structure = loss",
+    "vision_notes": "AUDNZD ascending channel with rising wedge approaching supply; structure never cleanly broke below wedge support; after confirms price recovered and ran to supply rather than selling off — loss."
+  },
+  {
+    "setup_id": "breakout_retest_018",
+    "instrument": "AUDNZD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "buy",
+    "date": "2025-12-18",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": true,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": true,
+      "dots_marked_on_chart": true,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "head and shoulder = sniper (bullish inverse H&S)",
+    "vision_notes": "AUDNZD bearish descending channel; falling wedge at low; two blue dots mark inverse H&S at demand OB; 90% rule at top; after confirms sniper buy entry and explosive rally to channel high."
+  },
+  {
+    "setup_id": "breakout_retest_019",
+    "instrument": "AUDNZD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-12",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "AUDNZD bearish impulse then rising corrective wedge near supply; after confirms OB retest at supply zone and sharp single-candle displacement to TP level."
+  },
+  {
+    "setup_id": "breakout_retest_020",
+    "instrument": "CADCHF",
+    "timeframe": "1h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-16",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "moderate",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "CADCHF showing two sequential channel structures; second rising corrective wedge at supply OB; after shows wedge break and sell; chart darkens after first session break indicating overnight continuation."
+  },
+  {
+    "setup_id": "breakout_retest_021",
+    "instrument": "unclear",
+    "timeframe": "1h",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2025-12-20",
+    "session": "london",
+    "outcome": null,
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": null,
+      "wick_only": null
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": null,
+      "ob_or_fvg_present_at_retest": null
+    },
+    "displacement": {
+      "single_large_body_candle": null,
+      "body_to_wick_ratio": null,
+      "covers_significant_target_distance": null
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": null,
+      "liquidity_sweep": false,
+      "fvg": null,
+      "order_block": null,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": null,
+    "filename_notes": "missed 1 & 2 entry. same pattern again on last structure — wait for breakout and retest then entry. Before image only — no after.",
+    "vision_notes": "Educational chart annotated in purple/cyan; shows two missed earlier entries circled as 1 and 2; third rising wedge forming in bearish channel with supply zone; 90% rule marked; outcome pending/no after image available."
+  },
+  {
+    "setup_id": "breakout_retest_022",
+    "instrument": "GER40",
+    "timeframe": "15m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-27",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "after = multiple entries",
+    "vision_notes": "GER40 index; dark theme; sellside/buyside liquidity range visible; rising wedge into supply zone; after shows two sequential blue-highlighted entry zones both reaching TP — demonstrates stacking entries on same setup."
+  },
+  {
+    "setup_id": "breakout_retest_023",
+    "instrument": "NZDCAD",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "buy",
+    "date": "2026-01-05",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "NZDCAD bearish descending channel; 90% rule at top; multiple demand zones at bottom; falling wedge breaks bullish; after confirms OB retest at demand and rally to TP at 90% level."
+  },
+  {
+    "setup_id": "breakout_retest_024",
+    "instrument": "US500",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-07",
+    "session": "new_york",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": true,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": false,
+      "ninety_percent_rule": true
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "S&P500 US500 30M; bearish descending channel with rising wedge; Imbalance label at entry zone FVG; 90% rule visible; after confirms clean OB/imbalance retest and sell-off reaching TP."
+  },
+  {
+    "setup_id": "breakout_retest_025",
+    "instrument": "US30",
+    "timeframe": "30m",
+    "pattern_type": "breakout_retest",
+    "direction": "buy",
+    "date": "2026-01-15",
+    "session": "new_york",
+    "outcome": "win",
+    "is_sniper": true,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": true,
+      "dots_marked_on_chart": true,
+      "wedge_channel_visible": false
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": true,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": false,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "head and shoulders inverse/bullish sniper entry",
+    "vision_notes": "US30 Dow Jones; descending market with range consolidation; three blue dots mark inverse H&S at demand OB; swing high target labeled; after confirms massive single-candle bullish breakout from sniper retest."
+  },
+  {
+    "setup_id": "breakout_retest_026",
+    "instrument": "US100",
+    "timeframe": "15m",
+    "pattern_type": "breakout_retest",
+    "direction": "sell",
+    "date": "2026-01-16",
+    "session": "london",
+    "outcome": "win",
+    "is_sniper": false,
+    "breakout_candle": {
+      "body_close_beyond_trendline": true,
+      "wick_only": false
+    },
+    "retest_flag": {
+      "smaller_than_original_channel": true,
+      "retest_depth_percent": "30-50",
+      "ob_or_fvg_present_at_retest": true
+    },
+    "displacement": {
+      "single_large_body_candle": true,
+      "body_to_wick_ratio": "high",
+      "covers_significant_target_distance": true
+    },
+    "sniper_confirmation": {
+      "head_and_shoulders_visible": false,
+      "dots_marked_on_chart": false,
+      "wedge_channel_visible": true
+    },
+    "confluences": {
+      "bos_choch": true,
+      "liquidity_sweep": false,
+      "fvg": false,
+      "order_block": true,
+      "wedge_pattern": true,
+      "supply_demand_zone": true,
+      "ninety_percent_rule": false
+    },
+    "quality_grade": "A",
+    "filename_notes": "standard before/after",
+    "vision_notes": "US100 Nasdaq 15M; CH and B labels visible; descending structure with supply zone; after rising corrective wedge breaks down from OB at supply; after shows sharp sell from retest to swing low demand zone."
+  }
+]
