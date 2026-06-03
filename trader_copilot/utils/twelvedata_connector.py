@@ -208,7 +208,7 @@ class TwelveDataConnector:
             symbol, timeframe, len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
-        time.sleep(0.5)   # respect TwelveData free-tier limit (8 req/min)
+        time.sleep(8)     # respect TwelveData free-tier limit (8 req/min = 1 req/7.5s)
         return candles
 
     # ─────────────────────────────────────────────

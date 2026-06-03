@@ -56,7 +56,20 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm"}
 COMMODITY_PAIRS = {"XAUUSDm"}           # Gold — 4H/15M, price-unit pip precision
 INDEX_PAIRS     = {"USTEC_x100m"}       # Nasdaq-100 — 4H/15M, point-unit precision
-ALL_PAIRS       = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS | INDEX_PAIRS)
+
+# Explicit scan order — XAUUSDm at position 2 so it hits TwelveData
+# early in the cycle before the 8 req/min free-tier limit is reached.
+# (sorted() would put it last alphabetically, guaranteeing a 429.)
+ALL_PAIRS = [
+    "EURUSDm",
+    "XAUUSDm",      # Gold — scanned second, before rate limit window fills
+    "USTEC_x100m",  # Nasdaq — scanned third
+    "GBPUSDm",
+    "EURAUDm",
+    "EURCADm",
+    "CADJPYm",
+    "GBPCADm",
+]
 
 
 # ─────────────────────────────────────────────
