@@ -53,7 +53,7 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 
-CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "AUDCADm", "CADJPYm", "GBPCADm"}
+CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm"}
 COMMODITY_PAIRS = {"XAUUSDm", "USTEC_x100m"}
 ALL_PAIRS       = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS)
 
