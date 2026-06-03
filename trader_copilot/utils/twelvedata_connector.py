@@ -99,18 +99,35 @@ class TwelveDataConnector:
     Returns List[Candle] in the same format as MT5Connector and
     MassiveConnector — fully interchangeable in the engine pipeline.
 
+    Dual-key mode
+    -------------
+    When api_key_2 / TWELVEDATA_API_KEY_2 is set, requests alternate between
+    key 1 and key 2 (even calls → key 1, odd calls → key 2).  Each key then
+    sees half the request rate, allowing a 2s inter-call delay while staying
+    under the 8 req/min free-tier cap per key.
+
     Parameters
     ----------
-    api_key   Override TWELVEDATA_API_KEY env var for this instance.
+    api_key    Override TWELVEDATA_API_KEY env var for this instance.
+    api_key_2  Override TWELVEDATA_API_KEY_2 env var (optional second key).
     """
 
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("TWELVEDATA_API_KEY", "")
+    def __init__(
+        self,
+        api_key:   Optional[str] = None,
+        api_key_2: Optional[str] = None,
+    ):
+        self.api_key   = api_key   or os.getenv("TWELVEDATA_API_KEY",   "")
+        self.api_key_2 = api_key_2 or os.getenv("TWELVEDATA_API_KEY_2", "")
+        self._call_counter = 0   # incremented on every successful request
+
         if not self.api_key:
             log.warning(
                 "[TwelveData] TWELVEDATA_API_KEY not set — "
                 "set it in .env or as a Railway service variable."
             )
+        if self.api_key_2:
+            log.info("[TwelveData] Dual-key mode active — load split across two accounts.")
 
     # ─────────────────────────────────────────────
     # PRIMARY: get_candles
@@ -143,18 +160,28 @@ class TwelveDataConnector:
             log.warning("[TwelveData] Unknown timeframe: %s", timeframe)
             return []
 
+        # Alternate between key 1 and key 2 on each call.
+        # Even counter → key 1, odd counter → key 2 (falls back to key 1 if
+        # key 2 is not configured).
+        use_key = (
+            self.api_key_2
+            if (self.api_key_2 and self._call_counter % 2 == 1)
+            else self.api_key
+        )
+        key_label = "key2" if use_key == self.api_key_2 else "key1"
+
         params = urllib.parse.urlencode({
             "symbol":     td_symbol,
             "interval":   interval,
             "outputsize": count,
-            "apikey":     self.api_key,
+            "apikey":     use_key,
             "order":      "ASC",          # oldest first — same as MT5
             "timezone":   "UTC",
             "format":     "JSON",
         })
         url = f"{_BASE}?{params}"
 
-        log.debug("[TwelveData] GET %s", url.replace(self.api_key, "***"))
+        log.debug("[TwelveData] GET %s [%s]", url.replace(use_key, "***"), key_label)
 
         try:
             req = urllib.request.Request(
@@ -204,12 +231,13 @@ class TwelveDataConnector:
             except (KeyError, ValueError) as exc:
                 log.debug("[TwelveData] Skipping malformed bar: %s — %s", bar, exc)
 
+        self._call_counter += 1
         log.info(
-            "[TwelveData] %-12s %-4s — %d candles (latest: %s)",
-            symbol, timeframe, len(candles),
+            "[TwelveData/%s] %-12s %-4s — %d candles (latest: %s)",
+            key_label, symbol, timeframe, len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
-        time.sleep(4)     # pace requests — 16 pairs × 4s = ~64s/cycle, under 8 req/min window
+        time.sleep(2)     # 2s delay; each key sees every other call → 4s between same-key requests
         return candles
 
     # ─────────────────────────────────────────────
