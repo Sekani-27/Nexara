@@ -41,6 +41,7 @@ import time
 import urllib.request
 import urllib.parse
 from datetime import datetime
+from itertools import cycle
 from typing import List, Optional
 
 from ..core.structures import Candle
@@ -119,7 +120,15 @@ class TwelveDataConnector:
     ):
         self.api_key   = api_key   or os.getenv("TWELVEDATA_API_KEY",   "")
         self.api_key_2 = api_key_2 or os.getenv("TWELVEDATA_API_KEY_2", "")
-        self._call_counter = 0   # incremented on every successful request
+
+        # Build a round-robin cycle over available keys.
+        # itertools.cycle advances unconditionally on every call — no integer
+        # counter means no off-by-one, no frozen state on failed requests.
+        _available = [k for k in [self.api_key, self.api_key_2] if k]
+        self._key_cycle = cycle(_available) if _available else cycle([""])
+        self._key_labels = {}
+        if self.api_key:   self._key_labels[self.api_key]   = "key1"
+        if self.api_key_2: self._key_labels[self.api_key_2] = "key2"
 
         if not self.api_key:
             log.warning(
@@ -127,7 +136,12 @@ class TwelveDataConnector:
                 "set it in .env or as a Railway service variable."
             )
         if self.api_key_2:
-            log.info("[TwelveData] Dual-key mode active — load split across two accounts.")
+            log.info(
+                "[TwelveData] Dual-key mode — key1=...%s  key2=...%s",
+                self.api_key[-6:], self.api_key_2[-6:],
+            )
+        else:
+            log.info("[TwelveData] Single-key mode — key1=...%s", self.api_key[-6:] if self.api_key else "unset")
 
     # ─────────────────────────────────────────────
     # PRIMARY: get_candles
@@ -160,15 +174,11 @@ class TwelveDataConnector:
             log.warning("[TwelveData] Unknown timeframe: %s", timeframe)
             return []
 
-        # Alternate between key 1 and key 2 on each call.
-        # Even counter → key 1, odd counter → key 2 (falls back to key 1 if
-        # key 2 is not configured).
-        use_key = (
-            self.api_key_2
-            if (self.api_key_2 and self._call_counter % 2 == 1)
-            else self.api_key
-        )
-        key_label = "key2" if use_key == self.api_key_2 else "key1"
+        # Advance the round-robin cycle and pick the next key.
+        # next() is called unconditionally — before any early-return path —
+        # so the cycle always rotates whether the request succeeds or fails.
+        use_key   = next(self._key_cycle)
+        key_label = self._key_labels.get(use_key, "key?")
 
         params = urllib.parse.urlencode({
             "symbol":     td_symbol,
@@ -231,7 +241,6 @@ class TwelveDataConnector:
             except (KeyError, ValueError) as exc:
                 log.debug("[TwelveData] Skipping malformed bar: %s — %s", bar, exc)
 
-        self._call_counter += 1
         log.info(
             "[TwelveData/%s] %-12s %-4s — %d candles (latest: %s)",
             key_label, symbol, timeframe, len(candles),
