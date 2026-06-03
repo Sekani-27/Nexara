@@ -53,18 +53,31 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 
-CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm"}
+CURRENCY_PAIRS  = {
+    # Original six
+    "EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm",
+    # New additions
+    "GBPJPYm", "USDJPYm", "USDZARm", "USDCHFm",
+    "AUDUSDm", "NZDUSDm", "USDCADm", "EURJPYm",
+}
 COMMODITY_PAIRS = {"XAUUSDm"}           # Gold — 4H/15M, price-unit pip precision
 INDEX_PAIRS     = {"USTEC_x100m"}       # Nasdaq-100 — 4H/15M, point-unit precision
 
-# Explicit scan order — XAUUSDm at position 2 so it hits TwelveData
-# early in the cycle before the 8 req/min free-tier limit is reached.
-# (sorted() would put it last alphabetically, guaranteeing a 429.)
+# Explicit scan order — commodity/index pairs placed early so they hit
+# TwelveData before the rate-limit window fills.  16 pairs total.
 ALL_PAIRS = [
     "EURUSDm",
-    "XAUUSDm",      # Gold — scanned second, before rate limit window fills
+    "XAUUSDm",      # Gold — scanned second, before rate-limit window fills
     "USTEC_x100m",  # Nasdaq — scanned third
     "GBPUSDm",
+    "USDJPYm",
+    "GBPJPYm",
+    "EURJPYm",
+    "USDCHFm",
+    "AUDUSDm",
+    "NZDUSDm",
+    "USDCADm",
+    "USDZARm",
     "EURAUDm",
     "EURCADm",
     "CADJPYm",

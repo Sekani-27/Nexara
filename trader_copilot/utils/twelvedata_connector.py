@@ -78,6 +78,7 @@ SYMBOL_MAP: dict = {
     "CHFJPYm":     "CHF/JPY",
     "NZDJPYm":     "NZD/JPY",
     "AUDCADm":     "AUD/CAD",
+    "USDZARm":     "USD/ZAR",
 }
 
 # ── Internal timeframe → TwelveData interval string ──────────────────────────
@@ -208,7 +209,7 @@ class TwelveDataConnector:
             symbol, timeframe, len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
-        time.sleep(8)     # respect TwelveData free-tier limit (8 req/min = 1 req/7.5s)
+        time.sleep(4)     # pace requests — 16 pairs × 4s = ~64s/cycle, under 8 req/min window
         return candles
 
     # ─────────────────────────────────────────────

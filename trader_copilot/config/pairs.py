@@ -60,6 +60,8 @@ PAIR_CONFIGS = {
     "CADJPYm": PairConfig("CADJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
     "CHFJPYm": PairConfig("CHFJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
     "NZDJPYm": PairConfig("NZDJPYm", "30M", "5M", ["london","sydney","tokyo"],   4.0, 2.5, 6.0, 0.01),
+    # ── Exotics ───────────────────────────────────────────────────────────────
+    "USDZARm": PairConfig("USDZARm", "30M", "5M", ["london_open","new_york_open"], 5.0, 3.0, 8.0, 0.0001),
     # ── Commodities / Indices ─────────────────────────────────────────────────
     "XAUUSDm":     PairConfig("XAUUSDm",     "4H", "15M", ["london_open","new_york_open"], 0.50, 0.30, 0.80, 1.0),
     "USTEC_x100m": PairConfig("USTEC_x100m", "4H", "15M", ["new_york_open"],               10.0, 5.0, 20.0, 1.0),
