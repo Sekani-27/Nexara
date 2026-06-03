@@ -101,6 +101,23 @@ class AlertTracker:
 # PAIR SCANNER
 # ─────────────────────────────────────────────
 
+def _fetch(primary, fallback, symbol: str, timeframe: str, count: int = 300) -> list:
+    """
+    Try `primary` connector first; fall back to `fallback` if it returns [].
+    Logs which source delivered data so Railway logs are informative.
+    """
+    candles = primary.get_candles(symbol, timeframe, count=count)
+    if candles:
+        return candles
+    if fallback is not None and fallback.is_available():
+        logger.info(
+            "%s %s — MT5 empty, trying Massive (Polygon.io) fallback",
+            symbol, timeframe,
+        )
+        candles = fallback.get_candles(symbol, timeframe, count=count)
+    return candles
+
+
 def scan_pair(
     symbol: str,
     engine,
@@ -108,24 +125,27 @@ def scan_pair(
     config,
     tracker: AlertTracker,
     dry_run: bool = False,
+    massive=None,           # optional MassiveConnector fallback
 ) -> bool:
     """
     Runs one scan cycle for a single pair using its correct pipeline.
+    Tries MT5 first; falls back to MassiveConnector (Polygon.io) if MT5
+    returns empty candles.
     Returns True if a new (non-duplicate) signal was generated.
     """
     try:
         if symbol in CURRENCY_PAIRS:
-            candles = mt5.get_candles(symbol, "30M", count=300)
+            candles = _fetch(mt5, massive, symbol, "30M", count=300)
             if not candles:
-                logger.warning(f"{symbol:10s} — No 30M candles returned")
+                logger.warning(f"{symbol:10s} — No 30M candles from MT5 or Massive")
                 return False
             signal = engine.analyse_currency_30m(candles)
 
         else:
-            candles_htf = mt5.get_candles(symbol, config.structure_tf, count=300)
-            candles_ltf = mt5.get_candles(symbol, config.entry_tf,     count=300)
+            candles_htf = _fetch(mt5, massive, symbol, config.structure_tf, count=300)
+            candles_ltf = _fetch(mt5, massive, symbol, config.entry_tf,     count=300)
             if not candles_htf or not candles_ltf:
-                logger.warning(f"{symbol:10s} — No candles returned")
+                logger.warning(f"{symbol:10s} — No candles from MT5 or Massive")
                 return False
             signal = engine.analyse(candles_htf, candles_ltf)
 
@@ -172,6 +192,7 @@ def run(
 ):
     from trader_copilot.engine import TraderCopilot
     from trader_copilot.utils.mt5_connector import MT5Connector
+    from trader_copilot.utils.massive_connector import MassiveConnector
     from trader_copilot.config.pairs import PAIR_CONFIGS
 
     # Validate requested pairs
@@ -187,10 +208,16 @@ def run(
     mt5 = MT5Connector()
     if not mt5.connect():
         logger.warning(
-            "MT5 connection unavailable — running without live data feed. "
-            "Signals will not fire until an MT5 terminal is reachable. "
-            "Continuing so the process stays alive on Railway/cloud."
+            "MT5 connection unavailable — will use Massive (Polygon.io) fallback "
+            "if MASSIVE_API_KEY is configured."
         )
+
+    # Massive (Polygon.io) fallback — active whenever MASSIVE_API_KEY is set
+    massive = MassiveConnector()
+    if massive.is_available():
+        logger.info("Massive connector ready — Polygon.io fallback active.")
+    else:
+        logger.info("MASSIVE_API_KEY not set — Massive fallback disabled.")
 
     # Build one engine instance per pair
     engines: Dict[str, TraderCopilot] = {}
@@ -230,6 +257,7 @@ def run(
                     config=configs[symbol],
                     tracker=tracker,
                     dry_run=dry_run,
+                    massive=massive,
                 ):
                     signals_fired += 1
 
