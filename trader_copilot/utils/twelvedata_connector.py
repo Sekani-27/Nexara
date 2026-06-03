@@ -37,6 +37,7 @@ Environment
 import json
 import logging
 import os
+import time
 import urllib.request
 import urllib.parse
 from datetime import datetime
@@ -207,6 +208,7 @@ class TwelveDataConnector:
             symbol, timeframe, len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
+        time.sleep(0.5)   # respect TwelveData free-tier limit (8 req/min)
         return candles
 
     # ─────────────────────────────────────────────
