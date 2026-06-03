@@ -101,20 +101,26 @@ class AlertTracker:
 # PAIR SCANNER
 # ─────────────────────────────────────────────
 
-def _fetch(primary, fallback, symbol: str, timeframe: str, count: int = 300) -> list:
+def _fetch(primary, fallback, symbol: str, timeframe: str,
+           count: int = 300, twelvedata=None) -> list:
     """
-    Try `primary` connector first; fall back to `fallback` if it returns [].
-    Logs which source delivered data so Railway logs are informative.
+    Three-tier data chain: MT5 → Massive (Polygon.io) → TwelveData.
+    Returns the first non-empty result and logs which source delivered it.
     """
     candles = primary.get_candles(symbol, timeframe, count=count)
     if candles:
         return candles
+
     if fallback is not None and fallback.is_available():
-        logger.info(
-            "%s %s — MT5 empty, trying Massive (Polygon.io) fallback",
-            symbol, timeframe,
-        )
+        logger.info("%s %s — MT5 empty, trying Massive (Polygon.io)", symbol, timeframe)
         candles = fallback.get_candles(symbol, timeframe, count=count)
+        if candles:
+            return candles
+
+    if twelvedata is not None and twelvedata.is_available():
+        logger.info("%s %s — Massive empty, trying TwelveData", symbol, timeframe)
+        candles = twelvedata.get_candles(symbol, timeframe, count=count)
+
     return candles
 
 
@@ -125,27 +131,30 @@ def scan_pair(
     config,
     tracker: AlertTracker,
     dry_run: bool = False,
-    massive=None,           # optional MassiveConnector fallback
+    massive=None,       # MassiveConnector (Polygon.io) — second in chain
+    twelvedata=None,    # TwelveDataConnector — third in chain
 ) -> bool:
     """
     Runs one scan cycle for a single pair using its correct pipeline.
-    Tries MT5 first; falls back to MassiveConnector (Polygon.io) if MT5
-    returns empty candles.
+    Data chain: MT5 → Massive (Polygon.io) → TwelveData.
     Returns True if a new (non-duplicate) signal was generated.
     """
     try:
         if symbol in CURRENCY_PAIRS:
-            candles = _fetch(mt5, massive, symbol, "30M", count=300)
+            candles = _fetch(mt5, massive, symbol, "30M",
+                             count=300, twelvedata=twelvedata)
             if not candles:
-                logger.warning(f"{symbol:10s} — No 30M candles from MT5 or Massive")
+                logger.warning(f"{symbol:10s} — No 30M candles from any source")
                 return False
             signal = engine.analyse_currency_30m(candles)
 
         else:
-            candles_htf = _fetch(mt5, massive, symbol, config.structure_tf, count=300)
-            candles_ltf = _fetch(mt5, massive, symbol, config.entry_tf,     count=300)
+            candles_htf = _fetch(mt5, massive, symbol, config.structure_tf,
+                                 count=300, twelvedata=twelvedata)
+            candles_ltf = _fetch(mt5, massive, symbol, config.entry_tf,
+                                 count=300, twelvedata=twelvedata)
             if not candles_htf or not candles_ltf:
-                logger.warning(f"{symbol:10s} — No candles from MT5 or Massive")
+                logger.warning(f"{symbol:10s} — No candles from any source")
                 return False
             signal = engine.analyse(candles_htf, candles_ltf)
 
@@ -193,6 +202,7 @@ def run(
     from trader_copilot.engine import TraderCopilot
     from trader_copilot.utils.mt5_connector import MT5Connector
     from trader_copilot.utils.massive_connector import MassiveConnector
+    from trader_copilot.utils.twelvedata_connector import TwelveDataConnector
     from trader_copilot.config.pairs import PAIR_CONFIGS
 
     # Validate requested pairs
@@ -212,12 +222,19 @@ def run(
             "if MASSIVE_API_KEY is configured."
         )
 
-    # Massive (Polygon.io) fallback — active whenever MASSIVE_API_KEY is set
+    # Massive (Polygon.io) — second in chain
     massive = MassiveConnector()
     if massive.is_available():
         logger.info("Massive connector ready — Polygon.io fallback active.")
     else:
         logger.info("MASSIVE_API_KEY not set — Massive fallback disabled.")
+
+    # TwelveData — third in chain
+    twelvedata = TwelveDataConnector()
+    if twelvedata.is_available():
+        logger.info("TwelveData connector ready — third-tier fallback active.")
+    else:
+        logger.info("TWELVEDATA_API_KEY not set — TwelveData fallback disabled.")
 
     # Build one engine instance per pair
     engines: Dict[str, TraderCopilot] = {}
@@ -258,6 +275,7 @@ def run(
                     tracker=tracker,
                     dry_run=dry_run,
                     massive=massive,
+                    twelvedata=twelvedata,
                 ):
                     signals_fired += 1
 
