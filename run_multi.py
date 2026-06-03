@@ -53,8 +53,8 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 
-CURRENCY_PAIRS  = {"EURUSD", "GBPUSD", "EURAUD", "EURCAD", "AUDCAD", "CADJPY", "GBPCAD"}
-COMMODITY_PAIRS = {"XAUUSD", "NAS100"}
+CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "AUDCADm", "CADJPYm", "GBPCADm"}
+COMMODITY_PAIRS = {"XAUUSDm", "USTEC_x100m"}
 ALL_PAIRS       = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS)
 
 
@@ -191,7 +191,7 @@ def run(
     for symbol in pairs:
         engines[symbol] = TraderCopilot(
             symbol=symbol,
-            webhook_url=webhook_url,
+            webhook_urls=[webhook_url] if webhook_url else None,
             log_path=f"{symbol}_alerts.jsonl"
         )
         configs[symbol] = PAIR_CONFIGS[symbol]

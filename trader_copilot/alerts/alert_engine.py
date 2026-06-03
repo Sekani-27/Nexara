@@ -10,6 +10,11 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from ..core.structures import TradeSignal, Direction
 
+try:
+    import risk_guard as _rg  # optional Risk Guard integration — see dispatch()
+except ImportError:
+    _rg = None
+
 logger = logging.getLogger("trader_copilot.alerts")
 
 
@@ -30,9 +35,15 @@ DIRECTION_EMOJI = {
 
 class AlertEngine:
 
-    def __init__(self, webhook_urls: Optional[List[str]] = None, log_path: Optional[str] = None):
+    def __init__(
+        self,
+        webhook_urls: Optional[List[str]] = None,
+        log_path: Optional[str] = None,
+        risk_guard=None,   # optional RiskGuard instance for pre-dispatch gating
+    ):
         self.webhook_urls = webhook_urls or []
         self.log_path     = log_path
+        self.risk_guard   = risk_guard   # set to a RiskGuard instance to enable
 
     # ─────────────────────────────────────────────
     # CONFIRMED SIGNAL — FORMAT + DISPATCH
@@ -96,8 +107,49 @@ class AlertEngine:
         }
 
     def dispatch(self, signal: TradeSignal):
-        """Print alert and optionally write to log / send webhook."""
-        alert_text = self.format_alert(signal)
+        """
+        Print alert and optionally write to log / send webhook.
+        If a RiskGuard instance is attached, gates the alert through Fence 1:
+          BLOCK → send block message only, return early.
+          WARN  → prepend warning + adjusted size, then send.
+          CLEAR → send normally with account-state footer appended.
+        """
+        # ── Risk Guard gate (optional) ────────────────────────────────────────
+        if self.risk_guard is not None and _rg is not None:
+            proposal = _rg.TradeProposal(
+                firm=self.risk_guard.config.name,
+                account_size=self.risk_guard.state.account_size,
+                proposed_risk_dollars=0.0,   # dollar risk not carried on signal
+                current_daily_pnl=self.risk_guard.state.daily_pnl,
+                open_risk_dollars=0.0,
+                trades_today=self.risk_guard.state.trades_today,
+                estimated_hold_minutes=60.0, # conservative default
+            )
+            decision = self.risk_guard.check_trade(proposal)
+
+            if decision.status == _rg.DecisionStatus.BLOCK:
+                block_text = _rg.alerts.format_block(decision)
+                print(block_text)
+                if self.log_path:
+                    with open(self.log_path, "a") as f:
+                        f.write(json.dumps({
+                            "type": "rg_block", "reason": decision.reason,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }) + "\n")
+                if self.webhook_urls:
+                    self._send_webhook(block_text)
+                return  # do not dispatch the trade alert
+
+            alert_text = self.format_alert(signal)
+
+            if decision.status == _rg.DecisionStatus.WARN:
+                alert_text = _rg.alerts.format_warn(alert_text, decision)
+            else:
+                alert_text = _rg.alerts.format_clear(alert_text, decision)
+        else:
+            alert_text = self.format_alert(signal)
+
+        # ── Normal dispatch ───────────────────────────────────────────────────
         print(alert_text)
 
         if self.log_path:

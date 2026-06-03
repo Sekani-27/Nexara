@@ -1,0 +1,25 @@
+# GOAT Funded — firm configuration
+# All percentage values are relative to account size.
+
+daily_dd_pct:            5
+total_dd_pct:           10
+target_pct:             10
+dd_calc:                rolling_equity_high
+
+rollover_time:          "17:00"
+rollover_tz:            US/Eastern
+
+min_hold_seconds:       120
+min_valid_day_pct:      0.5
+min_valid_days:         3
+
+news:                   true
+weekend:                true
+
+internal_soft_stop_pct: 2.5
+internal_hard_stop_pct: 3.75
+
+risk_per_trade_pct:     0.5
+max_open_risk_pct:      1.5
+max_trades_per_day:     3
+revenge_lock_hours:     24

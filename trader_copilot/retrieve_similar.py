@@ -26,12 +26,14 @@ Programmatic usage:
 
 import argparse
 import json
+import os
 import sys
 from typing import Any
 
 # ── Third-party ───────────────────────────────────────────────────────────────
 try:
     from qdrant_client import QdrantClient
+    from qdrant_client.models import Filter, FieldCondition, MatchValue
 except ImportError:
     sys.exit("Missing dependency: pip install qdrant-client")
 
@@ -41,11 +43,11 @@ except ImportError:
     sys.exit("Missing dependency: pip install sentence-transformers")
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-COLLECTION_NAME = "trade_memory"
-MODEL_NAME      = "all-MiniLM-L6-v2"
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "trade_memory")
+MODEL_NAME      = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
 DEFAULT_TOP_K   = 5
-DEFAULT_HOST    = "localhost"
-DEFAULT_PORT    = 6333
+DEFAULT_HOST    = os.getenv("QDRANT_HOST", "localhost")
+DEFAULT_PORT    = int(os.getenv("QDRANT_PORT", "6333"))
 
 # Module-level singletons — loaded once and reused across calls when imported
 _model: SentenceTransformer | None = None
@@ -74,6 +76,7 @@ def retrieve_similar(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
     score_threshold: float = 0.0,
+    regime: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Encode *query* and return the top-k most similar trade setups from Qdrant.
@@ -86,6 +89,10 @@ def retrieve_similar(
     top_k           : Number of results to return (default 5).
     host / port     : Qdrant connection details.
     score_threshold : Minimum cosine similarity to include a result (0–1).
+    regime          : Optional payload filter — only return records whose
+                      ``regime`` field matches this value exactly.
+                      Typical values: ``"trending"`` | ``"ranging"``.
+                      Pass ``None`` (default) to skip filtering.
 
     Returns
     -------
@@ -101,6 +108,15 @@ def retrieve_similar(
     # Encode query
     query_vector = model.encode(query, convert_to_numpy=True).tolist()
 
+    # Optional regime filter — only match records with the same market structure
+    # class as the live setup (trending vs ranging). Prevents descending-channel
+    # setups from polluting the memory when the current structure is consolidating.
+    query_filter: Filter | None = None
+    if regime:
+        query_filter = Filter(
+            must=[FieldCondition(key="regime", match=MatchValue(value=regime))]
+        )
+
     # Search Qdrant — qdrant-client ≥1.7 replaced client.search() with
     # client.query_points(), which returns a QueryResponse whose .points
     # attribute holds the list of ScoredPoint results.
@@ -110,6 +126,7 @@ def retrieve_similar(
         limit=top_k,
         score_threshold=score_threshold if score_threshold > 0.0 else None,
         with_payload=True,
+        query_filter=query_filter,
     )
 
     results = []

@@ -411,12 +411,21 @@ class BreakoutRetestEngine:
         )
 
         # ── Step 7: Build Entry Levels ────────────────────────────────────────
+        # SL must be at least as wide as the OB itself.
+        # On indices (US500, US30, GER40) sweep_wick_pips * pip_size is a tiny
+        # fraction of the actual OB range, producing absurdly tight stops and
+        # inflated R:R. Using max(ob_height, pip_buffer) fixes this for all
+        # instruments without changing forex behaviour (where ob_height ≈ pip_buffer).
+        ob_height      = ob.top - ob.bottom
+        pip_buffer     = self.config.sweep_wick_pips * self.config.pip_size
+        min_sl_dist    = max(ob_height, pip_buffer)
+
         if direction == Direction.BEARISH:
             entry_price = ob.top       # Limit short at TOP of OB
-            stop_loss   = ob.top + (self.config.sweep_wick_pips * self.config.pip_size)
+            stop_loss   = ob.top + min_sl_dist
         else:
             entry_price = ob.bottom    # Limit long at BOTTOM of OB
-            stop_loss   = ob.bottom - (self.config.sweep_wick_pips * self.config.pip_size)
+            stop_loss   = ob.bottom - min_sl_dist
 
         # Notes
         fvg_note = "FVG present at displacement" if fvg else "No FVG — OB only"

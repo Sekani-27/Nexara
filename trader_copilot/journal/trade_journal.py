@@ -53,6 +53,47 @@ class TradeRecord:
 
 class TradeJournal:
 
+    # Each entry is (version: int, description: str, sql: str).
+    # Append new migrations here — never edit or remove existing ones.
+    _MIGRATIONS: List[tuple] = [
+        (
+            1,
+            "initial schema — trades table",
+            """
+            CREATE TABLE IF NOT EXISTS trades (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol           TEXT NOT NULL,
+                direction        TEXT NOT NULL,
+                pattern          TEXT NOT NULL,
+                timeframe        TEXT,
+                entry_price      REAL NOT NULL,
+                stop_loss        REAL NOT NULL,
+                take_profit      REAL NOT NULL,
+                risk_reward      REAL,
+                confluence_score INTEGER,
+                fvg_present      INTEGER,
+                ob_present       INTEGER,
+                killzone_active  INTEGER,
+                signal_time      TEXT NOT NULL,
+                notes            TEXT,
+                outcome          TEXT DEFAULT 'pending',
+                close_price      REAL,
+                close_time       TEXT,
+                pnl_rr           REAL,
+                session          TEXT,
+                created_at       TEXT DEFAULT (datetime('now'))
+            )
+            """,
+        ),
+        # Add future migrations below, incrementing the version number.
+        # Example:
+        # (
+        #     2,
+        #     "add ml_confidence column to trades",
+        #     "ALTER TABLE trades ADD COLUMN ml_confidence REAL",
+        # ),
+    ]
+
     def __init__(self, db_path: str = "trader_copilot_journal.db"):
         self.db_path = db_path
         self._init_db()
@@ -72,32 +113,30 @@ class TradeJournal:
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
+            # Migration-tracking table — created unconditionally on every startup.
             conn.execute("""
-                CREATE TABLE IF NOT EXISTS trades (
-                    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-                    symbol           TEXT NOT NULL,
-                    direction        TEXT NOT NULL,
-                    pattern          TEXT NOT NULL,
-                    timeframe        TEXT,
-                    entry_price      REAL NOT NULL,
-                    stop_loss        REAL NOT NULL,
-                    take_profit      REAL NOT NULL,
-                    risk_reward      REAL,
-                    confluence_score INTEGER,
-                    fvg_present      INTEGER,
-                    ob_present       INTEGER,
-                    killzone_active  INTEGER,
-                    signal_time      TEXT NOT NULL,
-                    notes            TEXT,
-                    outcome          TEXT DEFAULT 'pending',
-                    close_price      REAL,
-                    close_time       TEXT,
-                    pnl_rr           REAL,
-                    session          TEXT,
-                    created_at       TEXT DEFAULT (datetime('now'))
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version     INTEGER PRIMARY KEY,
+                    description TEXT NOT NULL,
+                    applied_at  TEXT NOT NULL DEFAULT (datetime('now'))
                 )
             """)
             conn.commit()
+
+            applied = {
+                row[0]
+                for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
+            }
+
+            for version, description, sql in self._MIGRATIONS:
+                if version in applied:
+                    continue
+                conn.executescript(sql)
+                conn.execute(
+                    "INSERT INTO schema_migrations (version, description) VALUES (?, ?)",
+                    (version, description),
+                )
+                conn.commit()
 
     # ─────────────────────────────────────────────
     # WRITE
@@ -306,10 +345,10 @@ class TradeJournal:
             return "london"
         elif 10 <= hour < 12:
             return "london_ny_overlap_pre"
-        elif 12 <= hour < 16:
-            return "new_york"
         elif 13 <= hour < 14:
             return "new_york_open"
+        elif 12 <= hour < 16:
+            return "new_york"
         return "off_session"
 
     def export_csv(self, filepath: str):

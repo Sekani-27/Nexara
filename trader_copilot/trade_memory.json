@@ -39,7 +39,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "Descending bearish channel with rising corrective wedge; supply zone overhead; OB/FVG visible at breakout; clean retest and sharp sell-off to lower boundary."
+    "vision_notes": "Descending bearish channel with rising corrective wedge; supply zone overhead; OB/FVG visible at breakout; clean retest and sharp sell-off to lower boundary.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_002",
@@ -81,7 +82,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "Two sequential setups on same chart; second rising wedge inside bearish channel breaks down from supply OB; after confirms two clean retest entries both reaching target."
+    "vision_notes": "Two sequential setups on same chart; second rising wedge inside bearish channel breaks down from supply OB; after confirms two clean retest entries both reaching target.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_003",
@@ -123,7 +125,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "EURAUD with hookpoint label at channel origin; rising wedge corrective inside bearish channel reaching resistance; OB/supply zone at entry; after confirms large bearish move into demand zone."
+    "vision_notes": "EURAUD with hookpoint label at channel origin; rising wedge corrective inside bearish channel reaching resistance; OB/supply zone at entry; after confirms large bearish move into demand zone.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_004",
@@ -165,7 +168,8 @@
     },
     "quality_grade": "B",
     "filename_notes": "standard before/after",
-    "vision_notes": "Bearish descending channel; falling wedge at channel low near demand zones; 90% rule at top; after confirms bullish breakout with demand OB retest before rally."
+    "vision_notes": "Bearish descending channel; falling wedge at channel low near demand zones; 90% rule at top; after confirms bullish breakout with demand OB retest before rally.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_005",
@@ -207,7 +211,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "Bearish descending channel; 4H demand zone at bottom acts as OB; small corrective wedge breaks bullish; after shows demand OB retest and strong rally toward 90% rule level."
+    "vision_notes": "Bearish descending channel; 4H demand zone at bottom acts as OB; small corrective wedge breaks bullish; after shows demand OB retest and strong rally toward 90% rule level.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_006",
@@ -249,7 +254,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "EURUSD 15M; bullish impulse then bearish structure with rising corrective wedge; B/CH labels visible; supply zone overhead; after shows clean wedge break, retest of OB at supply, sharp drop to demand."
+    "vision_notes": "EURUSD 15M; bullish impulse then bearish structure with rising corrective wedge; B/CH labels visible; supply zone overhead; after shows clean wedge break, retest of OB at supply, sharp drop to demand.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_007",
@@ -291,7 +297,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "GBPCAD dark-theme chart; bearish descending channel with rising corrective wedge; supply zone and OB clearly marked; after shows massive single candle displacement down to demand zone target."
+    "vision_notes": "GBPCAD dark-theme chart; bearish descending channel with rising corrective wedge; supply zone and OB clearly marked; after shows massive single candle displacement down to demand zone target.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_008",
@@ -333,7 +340,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "AUDCAD ascending then bearish structure; falling wedge forms at top near supply; 90% rule at channel low; after confirms OB retest at supply and extended sell to lower boundary."
+    "vision_notes": "AUDCAD ascending then bearish structure; falling wedge forms at top near supply; 90% rule at channel low; after confirms OB retest at supply and extended sell to lower boundary.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_009",
@@ -375,7 +383,8 @@
     },
     "quality_grade": "B",
     "filename_notes": "cup and handle pattern",
-    "vision_notes": "Dark-theme chart; bearish descending market forms cup shape; handle forms at demand OB; after shows bullish breakout from handle retest and strong rally through the entire measured move target."
+    "vision_notes": "Dark-theme chart; bearish descending market forms cup shape; handle forms at demand OB; after shows bullish breakout from handle retest and strong rally through the entire measured move target.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_010",
@@ -417,7 +426,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "CADJPY with hookpoint label; two sequential structures; second rising wedge inside bearish channel breaks down from supply OB; after confirms retest at supply zone and sell to demand."
+    "vision_notes": "CADJPY with hookpoint label; two sequential structures; second rising wedge inside bearish channel breaks down from supply OB; after confirms retest at supply zone and sell to demand.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_011",
@@ -459,7 +469,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "CADJPY bearish channel with descending corrective wedge; supply zone labeled; horizontal 90% rule line extends far right; after confirms breakout from OB retest with sharp sell to TP level."
+    "vision_notes": "CADJPY bearish channel with descending corrective wedge; supply zone labeled; horizontal 90% rule line extends far right; after confirms breakout from OB retest with sharp sell to TP level.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_012",
@@ -501,7 +512,8 @@
     },
     "quality_grade": "C",
     "filename_notes": "no retest=invalid / structure broke no ob nor fvg = no retest = no entry",
-    "vision_notes": "GBPAUD 2H; bearish wedge formed but structure broke without leaving OB or FVG; no valid retest level formed; educational example of what does NOT qualify as an entry."
+    "vision_notes": "GBPAUD 2H; bearish wedge formed but structure broke without leaving OB or FVG; no valid retest level formed; educational example of what does NOT qualify as an entry.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_013",
@@ -543,7 +555,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "EURNZD; ascending bearish channel with rising wedge at top; OB and supply zone marked; 90% rule at bottom; after shows wedge break, clean retest of OB, and strong sell-off reaching TP."
+    "vision_notes": "EURNZD; ascending bearish channel with rising wedge at top; OB and supply zone marked; 90% rule at bottom; after shows wedge break, clean retest of OB, and strong sell-off reaching TP.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_014",
@@ -585,7 +598,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "head and shoulder = sniper entry",
-    "vision_notes": "USDJPY; bearish channel with rising wedge; three blue dots mark H&S pattern at the retest zone; supply zone and 90% rule labeled; after shows sniper precision retest of OB and sharp sell."
+    "vision_notes": "USDJPY; bearish channel with rising wedge; three blue dots mark H&S pattern at the retest zone; supply zone and 90% rule labeled; after shows sniper precision retest of OB and sharp sell.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_015",
@@ -627,7 +641,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "USDCAD dark-theme; bullish impulse followed by bearish structure with falling corrective wedge; X marker at hookpoint; after confirms wedge break, OB retest, and clean sell to TP."
+    "vision_notes": "USDCAD dark-theme; bullish impulse followed by bearish structure with falling corrective wedge; X marker at hookpoint; after confirms wedge break, OB retest, and clean sell to TP.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_016",
@@ -669,7 +684,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "AUDNZD bearish descending channel; rising corrective wedge breaks down from supply OB; 90% rule marked; after confirms retest and sell-off with price closing at lower channel boundary."
+    "vision_notes": "AUDNZD bearish descending channel; rising corrective wedge breaks down from supply OB; 90% rule marked; after confirms retest and sell-off with price closing at lower channel boundary.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_017",
@@ -711,7 +727,8 @@
     },
     "quality_grade": "C",
     "filename_notes": "did not break structure = loss",
-    "vision_notes": "AUDNZD ascending channel with rising wedge approaching supply; structure never cleanly broke below wedge support; after confirms price recovered and ran to supply rather than selling off — loss."
+    "vision_notes": "AUDNZD ascending channel with rising wedge approaching supply; structure never cleanly broke below wedge support; after confirms price recovered and ran to supply rather than selling off \u2014 loss.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_018",
@@ -753,7 +770,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "head and shoulder = sniper (bullish inverse H&S)",
-    "vision_notes": "AUDNZD bearish descending channel; falling wedge at low; two blue dots mark inverse H&S at demand OB; 90% rule at top; after confirms sniper buy entry and explosive rally to channel high."
+    "vision_notes": "AUDNZD bearish descending channel; falling wedge at low; two blue dots mark inverse H&S at demand OB; 90% rule at top; after confirms sniper buy entry and explosive rally to channel high.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_019",
@@ -795,7 +813,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "AUDNZD bearish impulse then rising corrective wedge near supply; after confirms OB retest at supply zone and sharp single-candle displacement to TP level."
+    "vision_notes": "AUDNZD bearish impulse then rising corrective wedge near supply; after confirms OB retest at supply zone and sharp single-candle displacement to TP level.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_020",
@@ -837,7 +856,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "CADCHF showing two sequential channel structures; second rising corrective wedge at supply OB; after shows wedge break and sell; chart darkens after first session break indicating overnight continuation."
+    "vision_notes": "CADCHF showing two sequential channel structures; second rising corrective wedge at supply OB; after shows wedge break and sell; chart darkens after first session break indicating overnight continuation.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_021",
@@ -878,8 +898,9 @@
       "ninety_percent_rule": true
     },
     "quality_grade": null,
-    "filename_notes": "missed 1 & 2 entry. same pattern again on last structure — wait for breakout and retest then entry. Before image only — no after.",
-    "vision_notes": "Educational chart annotated in purple/cyan; shows two missed earlier entries circled as 1 and 2; third rising wedge forming in bearish channel with supply zone; 90% rule marked; outcome pending/no after image available."
+    "filename_notes": "missed 1 & 2 entry. same pattern again on last structure \u2014 wait for breakout and retest then entry. Before image only \u2014 no after.",
+    "vision_notes": "Educational chart annotated in purple/cyan; shows two missed earlier entries circled as 1 and 2; third rising wedge forming in bearish channel with supply zone; 90% rule marked; outcome pending/no after image available.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_022",
@@ -921,7 +942,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "after = multiple entries",
-    "vision_notes": "GER40 index; dark theme; sellside/buyside liquidity range visible; rising wedge into supply zone; after shows two sequential blue-highlighted entry zones both reaching TP — demonstrates stacking entries on same setup."
+    "vision_notes": "GER40 index; dark theme; sellside/buyside liquidity range visible; rising wedge into supply zone; after shows two sequential blue-highlighted entry zones both reaching TP \u2014 demonstrates stacking entries on same setup.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_023",
@@ -963,7 +985,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "NZDCAD bearish descending channel; 90% rule at top; multiple demand zones at bottom; falling wedge breaks bullish; after confirms OB retest at demand and rally to TP at 90% level."
+    "vision_notes": "NZDCAD bearish descending channel; 90% rule at top; multiple demand zones at bottom; falling wedge breaks bullish; after confirms OB retest at demand and rally to TP at 90% level.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_024",
@@ -1005,7 +1028,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "S&P500 US500 30M; bearish descending channel with rising wedge; Imbalance label at entry zone FVG; 90% rule visible; after confirms clean OB/imbalance retest and sell-off reaching TP."
+    "vision_notes": "S&P500 US500 30M; bearish descending channel with rising wedge; Imbalance label at entry zone FVG; 90% rule visible; after confirms clean OB/imbalance retest and sell-off reaching TP.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_025",
@@ -1047,7 +1071,8 @@
     },
     "quality_grade": "A",
     "filename_notes": "head and shoulders inverse/bullish sniper entry",
-    "vision_notes": "US30 Dow Jones; descending market with range consolidation; three blue dots mark inverse H&S at demand OB; swing high target labeled; after confirms massive single-candle bullish breakout from sniper retest."
+    "vision_notes": "US30 Dow Jones; descending market with range consolidation; three blue dots mark inverse H&S at demand OB; swing high target labeled; after confirms massive single-candle bullish breakout from sniper retest.",
+    "regime": "trending"
   },
   {
     "setup_id": "breakout_retest_026",
@@ -1089,6 +1114,7 @@
     },
     "quality_grade": "A",
     "filename_notes": "standard before/after",
-    "vision_notes": "US100 Nasdaq 15M; CH and B labels visible; descending structure with supply zone; after rising corrective wedge breaks down from OB at supply; after shows sharp sell from retest to swing low demand zone."
+    "vision_notes": "US100 Nasdaq 15M; CH and B labels visible; descending structure with supply zone; after rising corrective wedge breaks down from OB at supply; after shows sharp sell from retest to swing low demand zone.",
+    "regime": "trending"
   }
 ]

@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -35,14 +36,14 @@ except ImportError:
     sys.exit("Missing dependency: pip install sentence-transformers")
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-COLLECTION_NAME = "trade_memory"
-MODEL_NAME      = "all-MiniLM-L6-v2"
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "trade_memory")
+MODEL_NAME      = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
 VECTOR_SIZE     = 384
 DISTANCE        = Distance.COSINE
 
 DEFAULT_JSON    = Path(__file__).parent / "trade_memory.json"
-DEFAULT_HOST    = "localhost"
-DEFAULT_PORT    = 6333
+DEFAULT_HOST    = os.getenv("QDRANT_HOST", "localhost")
+DEFAULT_PORT    = int(os.getenv("QDRANT_PORT", "6333"))
 
 
 # ── Text representation ───────────────────────────────────────────────────────
@@ -80,9 +81,12 @@ def build_text(record: dict) -> str:
     is_sniper = record.get("is_sniper", False)
     sniper_str = "sniper entry" if is_sniper else "standard entry"
 
+    regime = record.get("regime", "trending")  # "trending" | "ranging"
+
     text = (
         f"{instrument} {direction} on {timeframe} in {session} session. "
         f"Pattern: {pattern_type}. "
+        f"Regime: {regime}. "
         f"Entry type: {sniper_str}. "
         f"Outcome: {outcome}. "
         f"Quality grade: {quality}. "

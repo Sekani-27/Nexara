@@ -4,8 +4,7 @@ Tests feature engineering, model training, prediction, and ML engine.
 Run: PYTHONPATH=/path/to/project python trader_copilot/tests/test_phase3.py
 """
 
-import sys, os, tempfile
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import os, tempfile
 
 import numpy as np
 from datetime import datetime, timedelta

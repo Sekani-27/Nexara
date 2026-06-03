@@ -64,7 +64,7 @@ TF_MINUTES: Dict[str, int] = {
 
 # Clean user-facing symbol names requested for this feed
 WATCH_SYMBOLS: List[str] = [
-    "EURUSD", "GBPUSD", "USDCAD", "USDJPY",
+    "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "NZDUSD",
     "AUDNZD", "CADJPY", "AUDCAD", "GBPCAD",
     "EURNZD", "EURAUD",
     "XAUUSD",
@@ -79,6 +79,7 @@ PIPELINE: Dict[str, str] = {
     "GBPUSD": "currency_30m",
     "USDCAD": "currency_30m",
     "USDJPY": "currency_30m",
+    "NZDUSD": "currency_30m",
     "AUDNZD": "currency_30m",
     "CADJPY": "currency_30m",
     "AUDCAD": "currency_30m",
@@ -100,6 +101,7 @@ EXISTING_CONFIG_MAP: Dict[str, str] = {
     "GBPUSD": "GBPUSDm",
     "USDCAD": "USDCADm",
     "USDJPY": "USDJPYm",
+    "NZDUSD": "NZDUSDm",
     "CADJPY": "CADJPYm",
     "GBPCAD": "GBPCADm",
     "EURNZD": "EURNZDm",
@@ -333,18 +335,32 @@ def build_memory_query(signal, clean_symbol: str) -> str:
     )
 
 
-def fetch_similar_setups(query: str, use_memory: bool) -> Optional[List[dict]]:
+def fetch_similar_setups(
+    query: str,
+    use_memory: bool,
+    regime: Optional[str] = None,
+) -> Optional[List[dict]]:
     """
     Calls retrieve_similar.retrieve_similar() and returns top-K results.
     Silently returns None if Qdrant is unavailable — the feed continues.
+
+    regime : "trending" | "ranging" | None
+        When set, only Qdrant records whose ``regime`` payload field matches
+        are returned.  Pass None to skip filtering (backwards-compatible).
     """
     if not use_memory:
         return None
     try:
         from trader_copilot.retrieve_similar import retrieve_similar
-        return retrieve_similar(query, top_k=MEMORY_TOP_K)
-    except Exception as e:
-        logger.warning(f"[memory] Qdrant query failed (continuing without): {e}")
+        results = retrieve_similar(query, top_k=MEMORY_TOP_K, regime=regime)
+        logger.info(
+            "[memory] retrieve_similar returned %d result(s) "
+            "(regime_filter=%s): %s",
+            len(results) if results else 0, regime, results
+        )
+        return results
+    except Exception:
+        logger.exception("[memory] Qdrant query failed — full traceback:")
         return None
 
 
@@ -464,7 +480,16 @@ def _build_telegram_alert_dict(
 
     risk   = abs(sl - entry)
     reward = abs(tp - entry)
-    rr_str = f"{reward / risk:.1f}" if risk > 0 else "—"
+    if risk <= 0:
+        rr_str = "—"
+    else:
+        rr = reward / risk
+        if rr > 5.0:
+            # Suspiciously wide R:R — cap display and flag for manual review.
+            # Root cause is usually a near-zero SL on an index instrument.
+            rr_str = f">5.0 ⚠️ check SL manually"
+        else:
+            rr_str = f"{rr:.1f}"
 
     session_raw = _active_session(signal.timestamp)
     session_fmt = session_raw.replace("_", " ").title()
@@ -593,8 +618,10 @@ def scan_symbol(
     alert_tracker.register(clean_symbol, signal.direction.value, signal.entry_price)
 
     # ── Trade memory enrichment ───────────────────────────────────────────────
+    # regime="trending" is safe here: the engine regime gate already blocks
+    # any signal that originates from a ranging / choppy structure.
     memory_query   = build_memory_query(signal, clean_symbol)
-    similar_setups = fetch_similar_setups(memory_query, use_memory)
+    similar_setups = fetch_similar_setups(memory_query, use_memory, regime="trending")
     memory_block   = format_memory_block(similar_setups)
 
     # ── Dispatch alert ────────────────────────────────────────────────────────
@@ -604,7 +631,9 @@ def scan_symbol(
 
     # ── Telegram notification ─────────────────────────────────────────────────
     tg_dict = _build_telegram_alert_dict(signal, clean_symbol, similar_setups)
+    logger.info("[DEBUG] About to fire Telegram alert for %s", clean_symbol)
     _fire_telegram_alert(tg_dict)
+    logger.info("[DEBUG] Telegram alert fired for %s", clean_symbol)
 
     logger.info(
         f"[{clean_symbol}] SIGNAL FIRED — {signal.direction.value.upper()} | "

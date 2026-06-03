@@ -5,10 +5,6 @@ Run: python -m pytest tests/test_engine.py -v
   or: python tests/test_engine.py
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from datetime import datetime, timedelta
 from trader_copilot.core.structures import Candle, Direction, BiasType, StructureType
 from trader_copilot.core.structure_engine import StructureEngine

@@ -18,10 +18,13 @@ Usage:
         engine.alert(signal)
 """
 
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from .core.structures import Candle, Direction, BiasType, TradeSignal
+
+logger = logging.getLogger(__name__)
 from .core.structure_engine import StructureEngine
 from .core.poi_engine import POIEngine
 from .core.signal_generator import SignalGenerator
@@ -43,7 +46,8 @@ class TraderCopilot:
         if symbol not in PAIR_CONFIGS:
             raise ValueError(f"Unknown symbol: {symbol}. Supported: {list(PAIR_CONFIGS.keys())}")
 
-        self.symbol  = symbol
+        self.symbol        = symbol
+        self.backtest_mode = backtest_mode
         self.config: PairConfig = PAIR_CONFIGS[symbol]
 
         self.structure_engine       = StructureEngine(self.config)
@@ -173,6 +177,23 @@ class TraderCopilot:
         Returns a TradeSignal if a confirmed retest is found.
         Returns None but fires a pending alert if setup is valid but retest not yet confirmed.
         """
+
+        # ── Regime gate ───────────────────────────────────────────────────────────
+        # Breakout & Retest only works in trending (directional channel) conditions.
+        # Ranging / choppy structure produces false breakouts and absurd R:R values.
+        # Uses the same determine_bias() check the original HTF pipeline already does.
+        swings_30m = self.structure_engine.detect_swings(candles_30m, left=3, right=3)
+        bias_30m   = self.structure_engine.determine_bias(swings_30m)
+        if bias_30m == BiasType.RANGING:
+            if not self.backtest_mode:
+                logger.info(
+                    "[%s] 30M bias=RANGING — Breakout & Retest blocked "
+                    "(pattern requires trending structure)", self.symbol
+                )
+                return None
+            logger.debug(
+                "[%s] 30M bias=RANGING — regime gate bypassed (backtest_mode)", self.symbol
+            )
 
         # Run Breakout & Retest detection
         result = self.breakout_retest_engine.analyse(candles_30m)

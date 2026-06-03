@@ -7,10 +7,6 @@ Run:
     PYTHONPATH=. python trader_copilot/tests/test_breakout_retest.py
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from datetime import datetime, timedelta
 from trader_copilot.core.structures import Candle, Direction, BiasType, OrderBlock
 from trader_copilot.config.pairs import PAIR_CONFIGS

@@ -1,0 +1,24 @@
+# The5ers — firm configuration
+
+daily_dd_pct:            4
+total_dd_pct:            6
+target_pct:              6
+dd_calc:                static_balance
+
+rollover_time:          "00:00"
+rollover_tz:            UTC
+
+min_hold_seconds:       0
+min_valid_day_pct:      0
+min_valid_days:         0
+
+news:                   true
+weekend:                true
+
+internal_soft_stop_pct: 2
+internal_hard_stop_pct: 3
+
+risk_per_trade_pct:     0.5
+max_open_risk_pct:      1.5
+max_trades_per_day:     3
+revenge_lock_hours:     24

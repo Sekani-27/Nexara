@@ -41,7 +41,7 @@ PAIR_CONFIGS = {
     "USDCHFm": PairConfig("USDCHFm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
     "AUDUSDm": PairConfig("AUDUSDm", "30M", "5M", ["london","sydney"],           3.0, 2.0, 5.0, 0.0001),
     "USDCADm": PairConfig("USDCADm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "NZDUSDm": PairConfig("NZDUSDm", "30M", "5M", ["london","sydney"],           3.0, 2.0, 5.0, 0.0001),
+    "NZDUSDm": PairConfig("NZDUSDm", "30M", "5M", ["london","new_york"],          3.0, 2.0, 5.0, 0.0001),
     # ── Euro crosses ──────────────────────────────────────────────────────────
     "EURGBPm": PairConfig("EURGBPm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
     "EURJPYm": PairConfig("EURJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),

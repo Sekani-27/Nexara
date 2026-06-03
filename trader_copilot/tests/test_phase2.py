@@ -4,10 +4,8 @@ Tests journal logging, outcome recording, stats, and backtest result compilation
 Run: PYTHONPATH=/path/to/project python trader_copilot/tests/test_phase2.py
 """
 
-import sys
 import os
 import tempfile
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from datetime import datetime
 from trader_copilot.core.structures import TradeSignal, Direction

@@ -29,17 +29,36 @@ TF_MAP = {
 
 
 class MT5Connector:
+    """
+    Wraps the MetaTrader5 terminal connection.
+
+    The connection is opened once (lazily on the first fetch call) and held
+    open for the lifetime of the instance.  Use disconnect() / a context
+    manager to tear it down when the process exits.
+
+    Opening and closing mt5.initialize()/mt5.shutdown() on every candle
+    fetch is expensive and can hit terminal session limits when polling many
+    pairs at high frequency.
+    """
 
     def __init__(self, login: Optional[int] = None, password: Optional[str] = None,
                  server: Optional[str] = None):
         self._connected = False
+        self._mt5 = None          # module reference cached after first successful import
         self.login    = login
         self.password = password
         self.server   = server
 
+    # ── Connection lifecycle ──────────────────────────────────────────────────
+
     def connect(self) -> bool:
+        """Open the MT5 terminal connection.  Safe to call multiple times — a
+        no-op if already connected."""
+        if self._connected:
+            return True
         try:
             import MetaTrader5 as mt5
+            self._mt5 = mt5
             if self.login:
                 ok = mt5.initialize(login=self.login, password=self.password, server=self.server)
             else:
@@ -53,24 +72,41 @@ class MT5Connector:
             return False
 
     def disconnect(self):
-        try:
-            import MetaTrader5 as mt5
-            mt5.shutdown()
-        except ImportError:
-            pass
+        """Shut down the MT5 terminal connection and reset state."""
+        if self._connected and self._mt5 is not None:
+            try:
+                self._mt5.shutdown()
+            except Exception:
+                pass
+        self._connected = False
+        self._mt5 = None
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, *_):
+        self.disconnect()
+
+    # ── Data fetching ─────────────────────────────────────────────────────────
+
+    def _ensure_connected(self) -> bool:
+        """Lazily open the connection on the first fetch call."""
+        if not self._connected:
+            return self.connect()
+        return True
 
     def get_candles(self, symbol: str, timeframe: str, count: int = 300) -> List[Candle]:
         """
         Fetch the last `count` candles for symbol on the given timeframe.
         Returns List[Candle] ready for the TraderCopilot engine.
+        Reuses the open connection; does not call initialize/shutdown per call.
         """
-        if not self._connected:
-            if not self.connect():
-                return []
+        if not self._ensure_connected():
+            return []
 
         try:
-            import MetaTrader5 as mt5
-            import MetaTrader5 as mt5_tf
+            mt5 = self._mt5
 
             tf_minutes = TF_MAP.get(timeframe, 15)
             mt5_tf_const = {
@@ -103,6 +139,7 @@ class MT5Connector:
 
         except Exception as e:
             print(f"Error fetching candles: {e}")
+            self._connected = False   # treat as stale; next call will reconnect
             return []
 
     def get_current_price(self, symbol: str) -> Optional[float]:

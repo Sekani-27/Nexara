@@ -162,8 +162,8 @@ async def _send(text: str) -> None:
                 parse_mode=None,
             )
         log.debug("Telegram message sent OK (%d chars)", len(text))
-    except Exception as exc:  # noqa: BLE001
-        log.warning("Telegram send failed: %s", exc)
+    except Exception:  # noqa: BLE001
+        log.exception("Telegram send failed — full traceback:")
 
 
 # ── public API ────────────────────────────────────────────────────────────────

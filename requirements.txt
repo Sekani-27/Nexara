@@ -1,0 +1,30 @@
+# Trader Copilot — Python dependencies
+# Install: pip install -r requirements.txt
+# Python >= 3.10 recommended
+
+# ── Risk Guard ───────────────────────────────────────────────────────────────
+pyyaml>=6.0
+
+# ── Core ML ──────────────────────────────────────────────────────────────────
+numpy>=1.24
+scikit-learn>=1.3
+
+# ── Telegram dispatch ────────────────────────────────────────────────────────
+python-telegram-bot>=20.0
+python-dotenv>=1.0
+
+# ── Vector memory store ──────────────────────────────────────────────────────
+qdrant-client>=1.7
+sentence-transformers>=2.2
+
+# ── API server (optional — for future web dashboard) ─────────────────────────
+fastapi>=0.110
+uvicorn>=0.29
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest>=8.0
+pytest-asyncio>=0.23
+
+# ── Live trading (Windows only) ──────────────────────────────────────────────
+# MetaTrader5 is only available on Windows. Comment out on Linux/macOS.
+# MetaTrader5>=5.0
