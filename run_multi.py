@@ -180,10 +180,16 @@ def run(
         return
 
     # Connect to MetaTrader 5
+    # On Linux / Railway (no MT5 terminal), connect() returns False but the
+    # polling loop keeps running — get_candles() returns [] gracefully so
+    # scan_pair() logs "No candles returned" and moves on without crashing.
     mt5 = MT5Connector()
     if not mt5.connect():
-        logger.error("Could not connect to MT5. Exiting.")
-        return
+        logger.warning(
+            "MT5 connection unavailable — running without live data feed. "
+            "Signals will not fire until an MT5 terminal is reachable. "
+            "Continuing so the process stays alive on Railway/cloud."
+        )
 
     # Build one engine instance per pair
     engines: Dict[str, TraderCopilot] = {}
