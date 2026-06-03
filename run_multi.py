@@ -54,8 +54,9 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 # ─────────────────────────────────────────────
 
 CURRENCY_PAIRS  = {"EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm"}
-COMMODITY_PAIRS = {"XAUUSDm", "USTEC_x100m"}
-ALL_PAIRS       = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS)
+COMMODITY_PAIRS = {"XAUUSDm"}           # Gold — 4H/15M, price-unit pip precision
+INDEX_PAIRS     = {"USTEC_x100m"}       # Nasdaq-100 — 4H/15M, point-unit precision
+ALL_PAIRS       = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS | INDEX_PAIRS)
 
 
 # ─────────────────────────────────────────────
