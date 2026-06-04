@@ -299,6 +299,12 @@ def run(
     logger.info(f"  Dry-run   : {'YES — alerts logged only' if dry_run else 'no'}")
     logger.info(f"{'═' * 60}\n")
 
+    # Cold-start pause — give TwelveData rate-limit buckets time to settle
+    # before Cycle 1 fires.  Without this, a fresh container restart hammers
+    # both keys simultaneously from a standing start and hits the 429 window.
+    logger.info("Cold-start delay: 3s before first scan cycle…")
+    time.sleep(3)
+
     cycle = 0
 
     try:

@@ -246,7 +246,7 @@ class TwelveDataConnector:
             key_label, symbol, timeframe, len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
-        time.sleep(2)     # 2s delay; each key sees every other call → 4s between same-key requests
+        time.sleep(4)     # 18 calls × 4s = 72s/cycle; each key sees 9 calls, one every 8s < 7.5s/req limit
         return candles
 
     # ─────────────────────────────────────────────
