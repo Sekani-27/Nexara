@@ -12,9 +12,27 @@ Usage:
     candles_ltf = connector.get_candles("XAUUSD", "15M", count=200)
 """
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 from ..core.structures import Candle
+
+log = logging.getLogger(__name__)
+
+# ── One-time availability check at import time ────────────────────────────────
+# The MetaTrader5 package is Windows-only.  We try the import once here so
+# that connect() / get_candles() can fail silently on Linux/Railway without
+# printing the same "not installed" message hundreds of times per cycle.
+try:
+    import MetaTrader5 as _mt5_module
+    _MT5_AVAILABLE = True
+except ImportError:
+    _mt5_module = None
+    _MT5_AVAILABLE = False
+    log.warning(
+        "MetaTrader5 package not available — MT5Connector will return empty "
+        "candles. Install MetaTrader5 (Windows only) or use TwelveData/Massive."
+    )
 
 
 TF_MAP = {
@@ -56,19 +74,20 @@ class MT5Connector:
         no-op if already connected."""
         if self._connected:
             return True
+        if not _MT5_AVAILABLE:
+            return False   # already warned at import time — no repeat message
         try:
-            import MetaTrader5 as mt5
-            self._mt5 = mt5
+            self._mt5 = _mt5_module
             if self.login:
-                ok = mt5.initialize(login=self.login, password=self.password, server=self.server)
+                ok = _mt5_module.initialize(login=self.login, password=self.password, server=self.server)
             else:
-                ok = mt5.initialize()
+                ok = _mt5_module.initialize()
             self._connected = ok
             if not ok:
-                print(f"MT5 connection failed: {mt5.last_error()}")
+                log.error("MT5 connection failed: %s", _mt5_module.last_error())
             return ok
-        except ImportError:
-            print("MetaTrader5 package not installed. Run: pip install MetaTrader5")
+        except Exception as exc:
+            log.error("MT5 connect error: %s", exc)
             return False
 
     def disconnect(self):
@@ -144,9 +163,10 @@ class MT5Connector:
 
     def get_current_price(self, symbol: str) -> Optional[float]:
         """Get latest bid price for a symbol."""
+        if not _MT5_AVAILABLE or not self._connected:
+            return None
         try:
-            import MetaTrader5 as mt5
-            tick = mt5.symbol_info_tick(symbol)
+            tick = _mt5_module.symbol_info_tick(symbol)
             return tick.bid if tick else None
         except Exception:
             return None
