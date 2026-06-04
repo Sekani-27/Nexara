@@ -2,11 +2,9 @@
 builder = "dockerfile"
 
 [deploy]
-startCommand = "python run_multi.py"
+startCommand = "python run_sbonelo.py"
 restartPolicyType = "always"
 restartPolicyMaxRetries = 10
-healthcheckPath = "/health"
-healthcheckTimeout = 30
 
 [deploy.resources]
 memory = "512Mi"

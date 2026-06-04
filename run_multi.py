@@ -246,6 +246,10 @@ def run(
     from trader_copilot.utils.massive_connector import MassiveConnector
     from trader_copilot.utils.twelvedata_connector import TwelveDataConnector
     from trader_copilot.config.pairs import PAIR_CONFIGS
+    from health_server import start_health_server, update_health
+
+    # Start health endpoint in background (Railway healthcheck pings /health)
+    start_health_server(port=8080)
 
     # Validate requested pairs
     invalid = [p for p in pairs if p not in PAIR_CONFIGS]
@@ -327,6 +331,7 @@ def run(
                 ):
                     signals_fired += 1
 
+            update_health(pairs=len(pairs), cycle=cycle)
             logger.info(
                 f"── Cycle {cycle} done | {signals_fired} signal(s) fired | "
                 f"Next scan in {interval_minutes} min ──\n"

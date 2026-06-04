@@ -37,3 +37,14 @@ jobs:
           python -m pytest -v \
             --ignore=trader_copilot/tests/test_ml_engine.py \
             --ignore=trader_copilot/tests/test_phase3.py
+
+  notify:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy notification
+        run: |
+          echo "Tests passed — Railway will redeploy:"
+          echo "  → nexara (run_multi.py)"
+          echo "  → nexara-sbonelo (run_sbonelo.py)"
