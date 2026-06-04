@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genuvia Edge</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080C0F;--bg1:#0D1318;--bg2:#111820;--bg3:#151E28;
+  --border:#1C2530;--border2:#243040;
+  --white:#E8EDF2;--muted:#4A5A6A;--muted2:#7A8A9A;
+  --teal:#00C896;--teal-dim:#006B50;--teal-bg:#001F18;--teal-glow:rgba(0,200,150,0.08);
+  --red:#FF4D4D;--red-dim:#7A1A1A;--red-bg:#1A0808;
+  --amber:#F0A030;--amb-dim:#7A4A00;--amb-bg:#1A1000;
+  --blue:#4A9EFF;--blue-bg:#0A1828;--purple:#A07AFF;
+}
+html,body{height:100%;font-size:13px}
+body{background:var(--bg);color:var(--white);font-family:'DM Sans',sans-serif;overflow:hidden}
+
+/* ── SCREEN SYSTEM ── */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.4s ease,transform 0.4s ease;transform:translateX(30px)}
+.screen.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.screen.exit{opacity:0;transform:translateX(-30px)}
+
+/* ── GRID WRAPPER ── */
+.app-shell{position:absolute;inset:0;display:grid;grid-template-columns:220px 1fr;grid-template-rows:54px 1fr;opacity:0;pointer-events:none;transition:opacity 0.5s ease}
+.app-shell.active{opacity:1;pointer-events:all}
+
+/* ── ONBOARDING LAYOUT ── */
+.ob-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;position:relative;overflow:hidden}
+.ob-bg{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(0,200,150,0.04) 0%,transparent 70%)}
+.ob-grid-lines{position:absolute;inset:0;opacity:0.03;background-image:linear-gradient(var(--teal) 1px,transparent 1px),linear-gradient(90deg,var(--teal) 1px,transparent 1px);background-size:60px 60px}
+.ob-card{position:relative;z-index:1;width:100%;max-width:480px}
+
+/* ── PROGRESS BAR ── */
+.ob-progress{display:flex;gap:6px;margin-bottom:40px;justify-content:center}
+.ob-step{height:2px;flex:1;max-width:40px;background:var(--border2);border-radius:1px;transition:background 0.3s}
+.ob-step.done{background:var(--teal)}
+.ob-step.active{background:var(--teal);opacity:0.5}
+
+/* ── LOGO ── */
+.ob-logo{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.1em;color:var(--teal);margin-bottom:48px;text-align:center}
+.ob-logo-sub{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);display:block;margin-top:2px}
+
+/* ── TYPOGRAPHY ── */
+.ob-h{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,48px);letter-spacing:0.02em;line-height:1;margin-bottom:10px;color:var(--white)}
+.ob-h span{color:var(--teal)}
+.ob-sub{font-size:14px;color:var(--muted2);line-height:1.6;margin-bottom:36px;font-weight:300}
+
+/* ── INPUTS ── */
+.field{margin-bottom:16px}
+.field-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;display:block}
+.field input,.field select{width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:4px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--white);outline:none;transition:border-color 0.2s}
+.field input:focus,.field select:focus{border-color:var(--teal)}
+.field input::placeholder{color:var(--muted)}
+.field select option{background:var(--bg2)}
+
+/* ── BUTTONS ── */
+.btn-primary{width:100%;padding:14px;background:var(--teal);color:var(--bg);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;transition:opacity 0.15s,transform 0.1s;margin-top:8px}
+.btn-primary:hover{opacity:0.9}.btn-primary:active{transform:scale(0.99)}
+.btn-secondary{width:100%;padding:12px;background:transparent;color:var(--muted2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border2);border-radius:4px;cursor:pointer;transition:all 0.15s;margin-top:8px}
+.btn-secondary:hover{border-color:var(--muted2);color:var(--white)}
+
+/* ── QUIZ OPTIONS ── */
+.quiz-opts{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.quiz-opt{padding:16px 18px;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px}
+.quiz-opt:hover{border-color:var(--teal-dim);background:var(--teal-glow)}
+.quiz-opt.selected{border-color:var(--teal);background:var(--teal-glow)}
+.quiz-opt-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--muted);flex-shrink:0;transition:all 0.15s}
+.quiz-opt.selected .quiz-opt-dot{background:var(--teal);border-color:var(--teal)}
+.quiz-opt-text{flex:1}
+.quiz-opt-title{font-size:14px;font-weight:500;color:var(--white);margin-bottom:2px}
+.quiz-opt-sub{font-size:12px;color:var(--muted2)}
+.quiz-opt-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;flex-shrink:0}
+.badge-teal{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.badge-amber{background:var(--amb-bg);color:var(--amber);border:1px solid var(--amb-dim)}
+.badge-purple{background:#1A1230;color:var(--purple);border:1px solid #4A3880}
+
+/* ── FIRM GRID ── */
+.firm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px}
+.firm-card{padding:14px 16px;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;cursor:pointer;transition:all 0.15s;text-align:center}
+.firm-card:hover{border-color:var(--teal-dim)}
+.firm-card.selected{border-color:var(--teal);background:var(--teal-glow)}
+.firm-name{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--white);margin-bottom:3px}
+.firm-detail{font-size:11px;color:var(--muted2)}
+
+/* ── PAIR CHIPS ── */
+.pair-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.pair-chip{padding:7px 14px;background:var(--bg1);border:1px solid var(--border2);border-radius:3px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);transition:all 0.15s}
+.pair-chip:hover{border-color:var(--teal-dim);color:var(--white)}
+.pair-chip.selected{background:var(--teal-bg);border-color:var(--teal);color:var(--teal)}
+
+/* ── CONNECTION STATUS ── */
+.conn-status{padding:14px 16px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;margin-bottom:16px;display:flex;align-items:center;gap:10px;transition:all 0.3s}
+.conn-idle{background:var(--bg2);border:1px solid var(--border2);color:var(--muted2)}
+.conn-testing{background:var(--blue-bg);border:1px solid #1A3A6A;color:var(--blue)}
+.conn-ok{background:var(--teal-bg);border:1px solid var(--teal-dim);color:var(--teal)}
+.conn-fail{background:var(--red-bg);border:1px solid var(--red-dim);color:var(--red)}
+.conn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── RISK REVIEW ── */
+.risk-review-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.risk-review-row:last-child{border-bottom:none}
+.rrr-label{font-size:13px;color:var(--muted2)}
+.rrr-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--white)}
+.rrr-val.teal{color:var(--teal)}.rrr-val.amber{color:var(--amber)}.rrr-val.red{color:var(--red)}
+
+/* ── SUCCESS SCREEN ── */
+.success-icon{width:64px;height:64px;background:var(--teal-bg);border:1px solid var(--teal-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:24px;animation:popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
+.scan-ticker{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);line-height:2.2;margin-top:16px;max-height:80px;overflow:hidden}
+.scan-ticker .active-line{color:var(--teal)}
+
+/* ── WELCOME SCREEN ── */
+.welcome-features{display:flex;flex-direction:column;gap:10px;margin:28px 0}
+.wf{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;background:var(--bg1);border:1px solid var(--border);border-radius:6px}
+.wf-icon{width:32px;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.wf-teal{background:var(--teal-bg);border:1px solid var(--teal-dim)}
+.wf-blue{background:var(--blue-bg);border:1px solid #1A3A6A}
+.wf-purple{background:#1A1230;border:1px solid #4A3880}
+.wf-body .wf-title{font-size:13px;font-weight:500;color:var(--white);margin-bottom:2px}
+.wf-body .wf-sub{font-size:11px;color:var(--muted2)}
+
+/* ══════════════ DASHBOARD STYLES ══════════════ */
+.sidebar{grid-row:1/-1;background:var(--bg1);border-right:1px solid var(--border);padding:28px 0;display:flex;flex-direction:column;overflow-y:auto}
+.logo{padding:0 22px 28px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.logo-mark{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.08em;color:var(--white);line-height:1}
+.logo-sub{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);margin-top:3px}
+.nav-section{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);padding:0 22px;margin-bottom:8px;margin-top:20px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 22px;cursor:pointer;transition:background 0.15s;border-left:2px solid transparent;font-size:13px;color:var(--muted2)}
+.nav-item.active{background:var(--teal-glow);border-left-color:var(--teal);color:var(--white)}
+.nav-item:hover:not(.active){background:var(--bg2)}
+.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-teal{background:var(--teal)}.dot-blue{background:var(--blue)}.dot-purple{background:var(--purple)}.dot-amber{background:var(--amber)}.dot-muted{background:var(--muted)}
+.sidebar-footer{padding:20px 22px 0;border-top:1px solid var(--border)}
+.account-badge{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px}
+.account-firm{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:4px}
+.account-name{font-size:13px;font-weight:500;color:var(--white)}
+.account-size{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);margin-top:2px}
+.topbar{grid-column:2;background:var(--bg1);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between}
+.topbar-left{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:12px}
+.session-status{display:flex;align-items:center;gap:6px;background:var(--teal-bg);border:1px solid var(--teal-dim);border-radius:3px;padding:4px 10px;font-size:9px;letter-spacing:0.12em}
+.session-status.warn-state{background:var(--amb-bg);border-color:var(--amb-dim)}
+.session-status.lock-state{background:var(--red-bg);border-color:var(--red-dim)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+.pulse.warn{background:var(--amber)}.pulse.danger{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.rg-badge{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;color:var(--teal);background:var(--teal-bg);border:1px solid var(--teal-dim);padding:5px 12px;border-radius:3px;transition:all 0.3s}
+.rg-badge.warn-state{color:var(--amber);background:var(--amb-bg);border-color:var(--amb-dim)}
+.rg-badge.lock-state{color:var(--red);background:var(--red-bg);border-color:var(--red-dim)}
+.sim-bar{display:flex;gap:6px}
+.sim-btn{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--muted2);transition:all 0.15s}
+.sim-btn.fire{background:var(--teal-bg);border-color:var(--teal-dim);color:var(--teal)}.sim-btn.fire:hover{background:var(--teal);color:var(--bg)}
+.sim-btn.lose{background:var(--red-bg);border-color:var(--red-dim);color:var(--red)}.sim-btn.lose:hover{background:var(--red);color:var(--bg)}
+.sim-btn:hover{border-color:var(--muted2);color:var(--white)}
+.t-clock{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)}
+.main{grid-column:2;padding:20px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.view{display:none}.view.active{display:flex;flex-direction:column;gap:14px}
+.rg-hero{background:var(--bg1);border:1px solid var(--border);border-top:2px solid var(--teal);border-radius:4px;padding:20px 24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1.4fr;gap:0;transition:border-top-color 0.3s}
+.rg-hero.warn-state{border-top-color:var(--amber)}.rg-hero.lock-state{border-top-color:var(--red)}
+.rg-metric{padding:0 20px;border-right:1px solid var(--border)}
+.rg-metric:first-child{padding-left:0}.rg-metric:last-child{border-right:none}
+.rg-metric-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.rg-metric-value{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:0.02em;line-height:1;margin-bottom:4px;transition:color 0.3s}
+.v-teal{color:var(--teal)}.v-red{color:var(--red)}.v-amber{color:var(--amber)}.v-white{color:var(--white)}
+.rg-metric-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2)}
+.prog-bar{height:3px;background:var(--bg3);border-radius:2px;margin-top:10px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;background:var(--teal);transition:width 0.5s,background 0.3s}
+.fence-row{display:flex;gap:6px;margin-top:10px}
+.fp{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.1em;padding:3px 8px;border-radius:2px;text-transform:uppercase;transition:all 0.3s}
+.fp-clear{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.fp-active{background:var(--blue-bg);color:var(--blue);border:1px solid #1A3A6A}
+.fp-warn{background:var(--amb-bg);color:var(--amber);border:1px solid var(--amb-dim)}
+.fp-block{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}
+.panel{background:var(--bg1);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'DM Mono',monospace;font-size:8px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted2)}
+.panel-tag{font-family:'DM Mono',monospace;font-size:8px;padding:2px 8px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase}
+.tag-live{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.tag-muted{background:var(--bg3);color:var(--muted2);border:1px solid var(--border2)}
+.sig-item{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.sig-item:last-child{border-bottom:none}
+.sig-ind{width:28px;height:28px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Mono',monospace;font-size:8px;font-weight:500}
+.si-c{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.si-w{background:var(--amb-bg);color:var(--amber);border:1px solid var(--amb-dim)}
+.si-b{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.sig-body{flex:1;min-width:0}
+.sig-top{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.sig-pair{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--white)}
+.sig-pat{font-size:11px;color:var(--muted2)}.sig-conf{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2)}
+.sig-det{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.5}
+.sig-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0;margin-top:2px}
+.ring-svg{width:120px;height:120px;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--bg3);stroke-width:8}
+.ring-fill{fill:none;stroke:var(--teal);stroke-width:8;stroke-linecap:round;stroke-dasharray:283;transition:stroke-dashoffset 0.8s ease}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--white);line-height:1}
+.tstat{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:10px 12px;text-align:center}
+.tstat-v{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);line-height:1;transition:color 0.3s}
+.tstat-l{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.rb-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.rb-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);width:96px;flex-shrink:0}
+.rb-track{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.rb-fill{height:100%;border-radius:2px;background:var(--teal);transition:width 0.5s,background 0.3s}
+.rb-val{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);width:44px;text-align:right;flex-shrink:0;transition:color 0.3s}
+.pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair-card{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:12px 14px}
+.pair-name{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--white);margin-bottom:4px}
+.pair-bias{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.bd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.b-bull{background:var(--teal)}.b-bear{background:var(--red)}.b-range{background:var(--muted)}
+.bias-txt{font-size:11px;color:var(--muted2)}
+.pair-sig{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px;display:inline-block}
+.ps-w{background:var(--bg3);color:var(--muted2);border:1px solid var(--border2)}
+.ps-s{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.ps-b{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.j-row{display:grid;grid-template-columns:80px 60px 1fr 60px 60px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px}
+.j-row:last-child{border-bottom:none}
+.j-p{color:var(--white);font-weight:500}
+.j-out{padding:2px 7px;border-radius:2px;text-align:center;font-size:9px}
+.j-win{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.j-loss{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.j-open{background:var(--blue-bg);color:var(--blue);border:1px solid #1A3A6A}
+.locked-banner{display:none;background:var(--red-bg);border:1px solid var(--red-dim);border-radius:4px;padding:16px 20px;font-family:'DM Mono',monospace}
+.locked-banner.show{display:block}
+.lb-title{font-size:13px;font-weight:500;color:var(--red);margin-bottom:6px}
+.lb-body{font-size:11px;color:rgba(255,77,77,0.7);line-height:1.6}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.set-panel{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:20px}
+.set-title{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted2);margin-bottom:16px}
+.set-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.set-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.set-label{font-size:13px;color:var(--white)}.set-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);margin-top:2px}
+.set-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--teal)}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--teal);position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s}
+.toggle.off{background:var(--border2)}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--white);top:3px;left:19px;transition:left 0.2s}
+.toggle.off::after{left:3px}
+/* ── ACCOUNT SURVIVAL CARD ── */
+.survival-card{background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:0;overflow:hidden;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0}
+.survival-card.state-low{border-top:2px solid var(--teal)}
+.survival-card.state-medium{border-top:2px solid var(--amber)}
+.survival-card.state-high{border-top:2px solid var(--red)}
+.sv-header{grid-column:1/-1;padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sv-title{font-family:'DM Mono',monospace;font-size:8px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted2)}
+.sv-state{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:3px 10px;border-radius:2px}
+.svs-low{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.svs-medium{background:var(--amb-bg);color:var(--amber);border:1px solid var(--amb-dim)}
+.svs-high{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.sv-metric{padding:16px 20px;border-right:1px solid var(--border)}
+.sv-metric:last-child{border-right:none}
+.sv-metric-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.sv-metric-value{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.02em;line-height:1;margin-bottom:4px;transition:color 0.3s}
+.sv-metric-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);line-height:1.5}
+.sv-saved-detail{font-family:'DM Mono',monospace;font-size:9px;margin-top:6px;line-height:1.6}
+.sv-saved-line{display:flex;align-items:center;gap:6px;color:var(--muted2)}
+.sv-saved-line span.pos{color:var(--teal)}.sv-saved-line span.neg{color:var(--red)}
+.toast-wrap{position:fixed;top:70px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{font-family:'DM Mono',monospace;font-size:11px;padding:12px 16px;border-radius:4px;max-width:300px;line-height:1.7;animation:toastIn 0.3s ease;pointer-events:none}
+.t-clear{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-dim)}
+.t-warn{background:var(--amb-bg);color:var(--amber);border:1px solid var(--amb-dim)}
+.t-block{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes flashIn{0%{background:rgba(0,200,150,0.08)}100%{background:transparent}}
+</style>
+</head>
+<body>
+
+<!-- ═══════ SCREEN 1: WELCOME ═══════ -->
+<div class="screen active" id="s-welcome">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Intelligence Infrastructure</span></div>
+      <div class="ob-h">Trade smarter.<br>Never <span>blow</span> the account.</div>
+      <div class="ob-sub">SMC/ICT signal intelligence combined with automated Risk Guard enforcement. Built for funded traders.</div>
+      <div class="welcome-features">
+        <div class="wf"><div class="wf-icon wf-teal">⚡</div><div class="wf-body"><div class="wf-title">8-layer signal intelligence</div><div class="wf-sub">Market structure · SMC patterns · ML confidence · Vector memory</div></div></div>
+        <div class="wf"><div class="wf-icon wf-blue">🛡</div><div class="wf-body"><div class="wf-title">Risk Guard enforcement</div><div class="wf-sub">Firm rules enforced automatically — GOAT, FTMO, The5ers and more</div></div></div>
+        <div class="wf"><div class="wf-icon wf-purple">📊</div><div class="wf-body"><div class="wf-title">Real-time dashboard</div><div class="wf-sub">Live account health, signal feed, trade journal — everything in one place</div></div></div>
+      </div>
+      <button class="btn-primary" onclick="go('s-signup')">Get started →</button>
+      <button class="btn-secondary" onclick="go('s-signup')">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 2: SIGN UP ═══════ -->
+<div class="screen" id="s-signup">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Create account</span></div>
+      <div class="ob-progress" id="prog-signup"></div>
+      <div class="ob-h">Create your <span>account</span></div>
+      <div class="ob-sub">Takes under 60 seconds.</div>
+      <div class="field"><label class="field-label">Full name</label><input type="text" placeholder="Ntando Miya" id="inp-name" value="Ntando Miya"></div>
+      <div class="field"><label class="field-label">Email</label><input type="email" placeholder="ntando@genuvia.co" id="inp-email" value="ntando@genuvia.co"></div>
+      <div class="field"><label class="field-label">Password</label><input type="password" placeholder="••••••••" value="password123"></div>
+      <button class="btn-primary" onclick="go('s-quiz1')">Continue →</button>
+      <button class="btn-secondary" onclick="go('s-welcome')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 3: QUIZ — ACCOUNT TYPE ═══════ -->
+<div class="screen" id="s-quiz1">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Setup · 1 of 3</span></div>
+      <div class="ob-progress" id="prog-quiz1"></div>
+      <div class="ob-h">Which best <span>describes</span> you?</div>
+      <div class="ob-sub">This determines how Risk Guard is configured for you.</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt selected" onclick="selectQuiz(this,'funded')" data-val="funded">
+          <div class="quiz-opt-dot"></div>
+          <div class="quiz-opt-text"><div class="quiz-opt-title">I have a live funded account</div><div class="quiz-opt-sub">Active prop firm account — real money, real rules</div></div>
+          <span class="quiz-opt-badge badge-teal">Live</span>
+        </div>
+        <div class="quiz-opt" onclick="selectQuiz(this,'eval')" data-val="eval">
+          <div class="quiz-opt-dot"></div>
+          <div class="quiz-opt-text"><div class="quiz-opt-title">I'm in evaluation / challenge</div><div class="quiz-opt-sub">Working toward a funded account — simulation mode</div></div>
+          <span class="quiz-opt-badge badge-amber">Eval</span>
+        </div>
+        <div class="quiz-opt" onclick="selectQuiz(this,'personal')" data-val="personal">
+          <div class="quiz-opt-dot"></div>
+          <div class="quiz-opt-text"><div class="quiz-opt-title">I trade my personal account</div><div class="quiz-opt-sub">Own capital, custom rules — no prop firm</div></div>
+          <span class="quiz-opt-badge badge-purple">Personal</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="go('s-quiz2')">Continue →</button>
+      <button class="btn-secondary" onclick="go('s-signup')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 4: QUIZ — FIRM ═══════ -->
+<div class="screen" id="s-quiz2">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Setup · 2 of 3</span></div>
+      <div class="ob-progress" id="prog-quiz2"></div>
+      <div class="ob-h">Select your <span>firm</span></div>
+      <div class="ob-sub">Your firm's rules are loaded automatically. Risk Guard enforces them exactly.</div>
+      <div class="firm-grid">
+        <div class="firm-card selected" onclick="selectFirm(this,'GOAT')" id="firm-GOAT"><div class="firm-name">GOAT Funded</div><div class="firm-detail">5% DD · 10% target</div></div>
+        <div class="firm-card" onclick="selectFirm(this,'FTMO')" id="firm-FTMO"><div class="firm-name">FTMO</div><div class="firm-detail">5% DD · 10% target</div></div>
+        <div class="firm-card" onclick="selectFirm(this,'The5ers')" id="firm-The5ers"><div class="firm-name">The5%ers</div><div class="firm-detail">4% DD · 6% target</div></div>
+        <div class="firm-card" onclick="selectFirm(this,'Custom')" id="firm-Custom"><div class="firm-name">Custom rules</div><div class="firm-detail">Set your own limits</div></div>
+      </div>
+      <div class="field"><label class="field-label">Account size (USD)</label><input type="text" id="inp-acct" value="8,000" placeholder="e.g. 8,000"></div>
+      <div class="field"><label class="field-label">Step / phase</label><select id="inp-step"><option>Step 1 — Challenge</option><option>Step 2 — Verification</option><option>Funded</option></select></div>
+      <button class="btn-primary" onclick="go('s-quiz3')">Continue →</button>
+      <button class="btn-secondary" onclick="go('s-quiz1')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 5: QUIZ — PAIRS ═══════ -->
+<div class="screen" id="s-quiz3">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Setup · 3 of 3</span></div>
+      <div class="ob-progress" id="prog-quiz3"></div>
+      <div class="ob-h">Select your <span>pairs</span></div>
+      <div class="ob-sub">Edge will scan these on 30-second polling cycles during active sessions.</div>
+      <div class="pair-chips">
+        <div class="pair-chip selected" onclick="this.classList.toggle('selected')">XAUUSD</div>
+        <div class="pair-chip selected" onclick="this.classList.toggle('selected')">NAS100</div>
+        <div class="pair-chip selected" onclick="this.classList.toggle('selected')">GBPUSD</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">EURUSD</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">US30</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">GBPJPY</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">USDJPY</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">AUDUSD</div>
+        <div class="pair-chip selected" onclick="this.classList.toggle('selected')">EURUSD</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">USDCAD</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">SP500</div>
+        <div class="pair-chip" onclick="this.classList.toggle('selected')">BTCUSD</div>
+      </div>
+      <button class="btn-primary" onclick="go('s-mt5')">Continue →</button>
+      <button class="btn-secondary" onclick="go('s-quiz2')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 6: MT5 ═══════ -->
+<div class="screen" id="s-mt5">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Connect MT5</span></div>
+      <div class="ob-progress" id="prog-mt5"></div>
+      <div class="ob-h">Connect <span>MetaTrader 5</span></div>
+      <div class="ob-sub">Edge needs MT5 access for live price data and equity monitoring. Read-only — no trade execution.</div>
+      <div class="conn-status conn-idle" id="mt5-status"><span class="conn-dot" style="background:var(--muted)"></span><span>Not connected</span></div>
+      <div class="field"><label class="field-label">MT5 Login</label><input type="text" placeholder="12345678" value="84291047"></div>
+      <div class="field"><label class="field-label">MT5 Password</label><input type="password" placeholder="••••••••" value="password123"></div>
+      <div class="field"><label class="field-label">Server</label><input type="text" placeholder="GOATFunded-Live" value="GOATFunded-Live01"></div>
+      <button class="btn-primary" onclick="testMT5()">Test connection</button>
+      <button class="btn-secondary" onclick="go('s-quiz3')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 7: TELEGRAM ═══════ -->
+<div class="screen" id="s-telegram">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Connect Telegram</span></div>
+      <div class="ob-progress" id="prog-tg"></div>
+      <div class="ob-h">Connect <span>Telegram</span></div>
+      <div class="ob-sub">All signals, Risk Guard decisions, and session summaries are delivered here.</div>
+      <div class="conn-status conn-idle" id="tg-status"><span class="conn-dot" style="background:var(--muted)"></span><span>Not connected</span></div>
+      <div style="background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:10px">Setup instructions</div>
+        <div style="font-size:12px;color:var(--muted2);line-height:1.8">
+          1. Open Telegram and search <span style="color:var(--teal);font-family:'DM Mono',monospace">@GenuiviaEdgeBot</span><br>
+          2. Press <strong style="color:var(--white)">Start</strong> to begin the conversation<br>
+          3. Send the code below to verify your account
+        </div>
+      </div>
+      <div style="background:var(--teal-bg);border:1px solid var(--teal-dim);border-radius:4px;padding:14px 18px;margin-bottom:16px;text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">Your verification code</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:0.2em;color:var(--teal)">GE-7291</div>
+      </div>
+      <button class="btn-primary" onclick="testTelegram()">Verify connection</button>
+      <button class="btn-secondary" onclick="go('s-mt5')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 8: RISK REVIEW ═══════ -->
+<div class="screen" id="s-risk">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card">
+      <div class="ob-logo">GENUVIA EDGE <span class="ob-logo-sub">Risk Guard config</span></div>
+      <div class="ob-progress" id="prog-risk"></div>
+      <div class="ob-h">Review <span>Risk Guard</span> limits</div>
+      <div class="ob-sub">These limits are loaded from your GOAT 8K Step 1 config. You can adjust them in settings at any time.</div>
+      <div style="background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:4px 18px;margin-bottom:20px">
+        <div class="risk-review-row"><span class="rrr-label">Daily drawdown (firm)</span><span class="rrr-val">5% — $400</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Internal soft stop</span><span class="rrr-val amber">$160 — signals halved</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Internal hard stop</span><span class="rrr-val red">$240 — session locked</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Total drawdown</span><span class="rrr-val">10% — floor $7,200</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Risk per trade</span><span class="rrr-val teal">$40 (0.5%)</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Max open risk</span><span class="rrr-val teal">$120 (1.5%)</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Max trades / day</span><span class="rrr-val teal">3 trades</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Min hold time</span><span class="rrr-val">2 minutes</span></div>
+        <div class="risk-review-row"><span class="rrr-label">Revenge lock</span><span class="rrr-val">24h after hard stop</span></div>
+        <div class="risk-review-row"><span class="rrr-label">DD calculation</span><span class="rrr-val">Rolling equity high</span></div>
+      </div>
+      <button class="btn-primary" onclick="go('s-ready')">Confirm & launch →</button>
+      <button class="btn-secondary" onclick="go('s-telegram')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SCREEN 9: READY ═══════ -->
+<div class="screen" id="s-ready">
+  <div class="ob-wrap">
+    <div class="ob-bg"></div><div class="ob-grid-lines"></div>
+    <div class="ob-card" style="text-align:center">
+      <div class="success-icon">✓</div>
+      <div class="ob-h" style="text-align:center">You're <span>live</span></div>
+      <div class="ob-sub" style="text-align:center;margin-bottom:20px">Risk Guard is active. MT5 connected. Telegram ready.<br>Edge is now scanning for setups.</div>
+      <div class="scan-ticker" id="scan-ticker">
+        <div>Connecting to MT5 — GOATFunded-Live01...</div>
+        <div>Loading GOAT firm config...</div>
+        <div>Initialising Risk Guard — 3 fences active...</div>
+        <div class="active-line">Starting pair scan — XAUUSD, NAS100, GBPUSD...</div>
+        <div class="active-line">HTF analysis complete — XAUUSD bullish bias confirmed</div>
+        <div class="active-line">🟢 Setup detected — XAUUSD · Breakout & Retest · 78%</div>
+      </div>
+      <button class="btn-primary" style="margin-top:28px" onclick="launchDashboard()">Open dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD SHELL ═══════ -->
+<div class="app-shell" id="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo"><div class="logo-mark">GENUVIA EDGE</div><div class="logo-sub">Intelligence Infrastructure</div></div>
+    <nav>
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" onclick="dView('d-dash',this)"><span class="nav-dot dot-teal"></span>Dashboard</div>
+      <div class="nav-item" onclick="dView('d-signals',this)"><span class="nav-dot dot-blue"></span>Signal Feed</div>
+      <div class="nav-section">Risk Guard</div>
+      <div class="nav-item" onclick="dView('d-session',this)"><span class="nav-dot dot-teal"></span>Session State</div>
+      <div class="nav-section">Intelligence</div>
+      <div class="nav-item" onclick="dView('d-scanner',this)"><span class="nav-dot dot-purple"></span>Pair Scanner</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="account-badge">
+        <div class="account-firm" id="d-firm-badge">GOAT Funded · Step 1</div>
+        <div class="account-name" id="d-name-badge">Ntando Miya</div>
+        <div class="account-size">$8,000 account</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span>London Session</span>
+      <div class="session-status" id="d-sess-pill"><div class="pulse" id="d-pulse"></div><span id="d-sess-txt" style="color:var(--teal)">Active</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="sim-bar">
+        <button class="sim-btn fire" onclick="fireSignal()">⚡ Signal</button>
+        <button class="sim-btn lose" onclick="takeLoss()">↓ Loss</button>
+        <button class="sim-btn" onclick="resetSim()" style="background:var(--bg3);color:var(--muted)">↺</button>
+        <button class="sim-btn" onclick="backToOnboarding()" style="border-color:var(--teal-dim);color:var(--teal)">← Onboarding</button>
+      </div>
+      <div id="mt5-indicator" style="display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;padding:4px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px">
+        <span id="mt5-dot" style="width:6px;height:6px;border-radius:50%;background:var(--amber);transition:background 0.3s;flex-shrink:0"></span>
+        <span id="mt5-txt" style="color:var(--amber);transition:color 0.3s">MT5 ···</span>
+      </div>
+      <div class="rg-badge" id="d-rg-badge"><div class="pulse" id="d-rg-pulse"></div><span id="d-rg-txt">Risk Guard · Active</span></div>
+      <div class="t-clock" id="d-clock">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="toast-wrap" id="toast-wrap"></div>
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="d-dash">
+      <div class="locked-banner" id="d-locked"><div class="lb-title">🔴 Session locked — hard stop reached</div><div class="lb-body">Daily P&L hit -$240. No further trades. Revenge lock: 24h. Unlocks tomorrow at rollover.</div></div>
+      <div class="rg-hero" id="d-hero">
+        <div class="rg-metric" style="padding-left:0"><div class="rg-metric-label">Daily P&L</div><div class="rg-metric-value v-teal" id="h-pnl">+$84</div><div class="rg-metric-sub" id="h-pnl-s">+1.05% today</div><div class="prog-bar"><div class="prog-fill" id="h-pnl-bar" style="width:35%"></div></div></div>
+        <div class="rg-metric"><div class="rg-metric-label">Daily floor</div><div class="rg-metric-value v-white" id="h-floor">$7,720</div><div class="rg-metric-sub" id="h-floor-s">Rolling · High $8,084</div><div class="prog-bar"><div class="prog-fill" id="h-floor-bar" style="width:5%"></div></div></div>
+        <div class="rg-metric"><div class="rg-metric-label">Trades today</div><div class="rg-metric-value v-white" id="h-trades">1 <span style="font-size:18px;color:var(--muted)">/ 3</span></div><div class="rg-metric-sub" id="h-trades-s">2 remaining</div><div class="fence-row"><span class="fp fp-clear" id="fp1">F1 Clear</span><span class="fp fp-active" id="fp2">F2 Active</span><span class="fp fp-clear" id="fp3">F3 Pending</span></div></div>
+        <div class="rg-metric"><div class="rg-metric-label">Open risk</div><div class="rg-metric-value v-amber" id="h-risk">$40</div><div class="rg-metric-sub" id="h-risk-s">$80 headroom</div><div class="prog-bar"><div class="prog-fill" id="h-risk-bar" style="width:33%;background:var(--amber)"></div></div></div>
+        <div class="rg-metric"><div class="rg-metric-label">Target · Step 1</div><div class="rg-metric-value v-white" id="h-tgt">$344 <span style="font-size:16px;color:var(--muted)">/ $800</span></div><div class="rg-metric-sub" id="h-tgt-s">43% · Valid days 2/3</div><div class="prog-bar"><div class="prog-fill" id="h-tgt-bar" style="width:43%"></div></div></div>
+      </div>
+      <!-- ACCOUNT SURVIVAL CARD -->
+      <div class="survival-card state-low" id="sv-card">
+        <div class="sv-header">
+          <span class="sv-title">Account Survival</span>
+          <span class="sv-state svs-low" id="sv-state-badge">Today's Risk: LOW</span>
+        </div>
+        <div class="sv-metric">
+          <div class="sv-metric-label">Distance to failure</div>
+          <div class="sv-metric-value v-teal" id="sv-distance">$1,144</div>
+          <div class="sv-metric-sub" id="sv-distance-sub">$944 to firm limit · $1,144 to internal hard stop</div>
+        </div>
+        <div class="sv-metric">
+          <div class="sv-metric-label">Probability of passing</div>
+          <div class="sv-metric-value v-teal" id="sv-prob">73%</div>
+          <div class="sv-metric-sub" id="sv-prob-sub">Based on P&L pace · Valid days · Days remaining</div>
+        </div>
+        <div class="sv-metric">
+          <div class="sv-metric-label">Breaches prevented</div>
+          <div class="sv-metric-value v-white" id="sv-blocked">14</div>
+          <div class="sv-metric-sub">Signals blocked by Risk Guard this week</div>
+        </div>
+        <div class="sv-metric">
+          <div class="sv-metric-label">Capital saved today</div>
+          <div class="sv-metric-value v-teal" id="sv-saved">$120</div>
+          <div class="sv-saved-detail" id="sv-saved-detail">
+            <div class="sv-saved-line"><span class="neg">↓</span><span>2 signals blocked</span></div>
+            <div class="sv-saved-line"><span class="neg">↓</span><span>Potential loss: -$120</span></div>
+            <div class="sv-saved-line"><span class="pos">✓</span><span>Actual loss: -$40</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel"><div class="panel-header"><span class="panel-title">Signal feed</span><span class="panel-tag tag-live">Live</span></div><div style="padding:0 18px" id="d-feed">
+          <div class="sig-item"><div class="sig-ind si-c">CLR</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">XAUUSD</span><span class="sig-pat">Breakout &amp; Retest</span><span class="sig-conf">78%</span></div><div class="sig-det">Entry 2,318.40 · SL 2,311.20 · TP 2,334.80 · R:R 2.3</div></div><div class="sig-time">06:02</div></div>
+          <div class="sig-item"><div class="sig-ind si-w">WRN</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">GBPUSD</span><span class="sig-pat">Unicorn Model</span><span class="sig-conf">65%</span></div><div class="sig-det">Half size · Soft stop active · $20 risk</div></div><div class="sig-time">05:47</div></div>
+          <div class="sig-item"><div class="sig-ind si-b">BLK</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">EURUSD</span><span class="sig-pat">Breaker Block FVG</span><span class="sig-conf">71%</span></div><div class="sig-det">Blocked · Regime gate — ranging</div></div><div class="sig-time">05:30</div></div>
+        </div></div>
+        <div class="panel"><div class="panel-header"><span class="panel-title">Profit target</span><span class="panel-tag tag-muted">Step 1</span></div><div class="panel-body">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <div style="position:relative;width:120px;height:120px">
+              <svg class="ring-svg" viewBox="0 0 100 100"><circle class="ring-track" cx="50" cy="50" r="45"/><circle class="ring-fill" id="d-ring" cx="50" cy="50" r="45" style="stroke-dashoffset:161"/></svg>
+              <div class="ring-center"><div class="ring-pct" id="d-ring-pct">43%</div><div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.1em;color:var(--muted2);text-transform:uppercase">to target</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;width:100%">
+              <div class="tstat"><div class="tstat-v" id="d-earned" style="color:var(--teal)">$344</div><div class="tstat-l">Earned</div></div>
+              <div class="tstat"><div class="tstat-v" id="d-remain">$456</div><div class="tstat-l">Remaining</div></div>
+              <div class="tstat"><div class="tstat-v" id="d-vdays" style="color:var(--teal)">2</div><div class="tstat-l">Valid days</div></div>
+              <div class="tstat"><div class="tstat-v">1</div><div class="tstat-l">Days min left</div></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><div class="panel-header"><span class="panel-title">Pair scanner</span><span class="panel-tag tag-live">30s poll</span></div><div class="panel-body"><div class="pair-grid">
+          <div class="pair-card"><div class="pair-name">XAUUSD</div><div class="pair-bias"><span class="bd b-bull"></span><span class="bias-txt">Bullish bias</span></div><span class="pair-sig ps-s">Setup detected</span></div>
+          <div class="pair-card"><div class="pair-name">NAS100</div><div class="pair-bias"><span class="bd b-bull"></span><span class="bias-txt">Bullish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+          <div class="pair-card"><div class="pair-name">GBPUSD</div><div class="pair-bias"><span class="bd b-bear"></span><span class="bias-txt">Bearish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+          <div class="pair-card"><div class="pair-name">EURUSD</div><div class="pair-bias"><span class="bd b-range"></span><span class="bias-txt">Ranging · gated</span></div><span class="pair-sig ps-b">Regime blocked</span></div>
+        </div></div></div>
+        <div class="panel"><div class="panel-header"><span class="panel-title">Trade journal</span><span class="panel-tag tag-muted">This week</span></div><div style="padding:0 18px">
+          <div style="display:grid;grid-template-columns:80px 60px 1fr 60px 60px;gap:10px;padding:9px 0 8px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase"><span>Pair</span><span>Pattern</span><span>Levels</span><span>Result</span><span>P&L</span></div>
+          <div id="d-journal">
+            <div class="j-row"><span class="j-p">XAUUSD</span><span style="color:var(--muted2)">B&R</span><span style="color:var(--muted2)">2318/2311/2334</span><span class="j-out j-open">Open</span><span style="color:var(--blue);font-family:'DM Mono',monospace">+$28</span></div>
+            <div class="j-row"><span class="j-p">NAS100</span><span style="color:var(--muted2)">Sniper</span><span style="color:var(--muted2)">18240/18190</span><span class="j-out j-win">Win</span><span style="color:var(--teal);font-family:'DM Mono',monospace">+$72</span></div>
+            <div class="j-row"><span class="j-p">GBPUSD</span><span style="color:var(--muted2)">Unicorn</span><span style="color:var(--muted2)">1.268/1.266</span><span class="j-out j-win">Win</span><span style="color:var(--teal);font-family:'DM Mono',monospace">+$40</span></div>
+            <div class="j-row"><span class="j-p">EURUSD</span><span style="color:var(--muted2)">Breaker</span><span style="color:var(--muted2)">1.084/1.086</span><span class="j-out j-loss">Loss</span><span style="color:var(--red);font-family:'DM Mono',monospace">-$40</span></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- SIGNALS VIEW -->
+    <div class="view" id="d-signals"><div class="panel"><div class="panel-header"><span class="panel-title">All signals</span><span class="panel-tag tag-live">Live</span></div><div style="padding:0 18px" id="d-feed-full">
+      <div class="sig-item"><div class="sig-ind si-c">CLR</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">XAUUSD</span><span class="sig-pat">Breakout & Retest</span><span class="sig-conf">78%</span></div><div class="sig-det">Entry 2,318.40 · SL 2,311.20 · TP 2,334.80 · R:R 2.3 · $40 risk</div></div><div class="sig-time">06:02</div></div>
+      <div class="sig-item"><div class="sig-ind si-w">WRN</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">GBPUSD</span><span class="sig-pat">Unicorn Model</span><span class="sig-conf">65%</span></div><div class="sig-det">Half size · Soft stop active · $20 risk</div></div><div class="sig-time">05:47</div></div>
+      <div class="sig-item"><div class="sig-ind si-b">BLK</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">EURUSD</span><span class="sig-pat">Breaker Block FVG</span><span class="sig-conf">71%</span></div><div class="sig-det">Blocked · Regime gate — ranging market on H4</div></div><div class="sig-time">05:30</div></div>
+    </div></div></div>
+
+    <!-- SESSION VIEW -->
+    <div class="view" id="d-session"><div class="grid-2">
+      <div class="panel"><div class="panel-header"><span class="panel-title">Fence status</span><span class="panel-tag tag-live">Live</span></div><div class="panel-body">
+        <div class="rb-row"><div class="rb-label">F1 Pre-trade</div><div class="rb-track"><div style="width:100%;height:100%;background:var(--teal-bg)"></div></div><div class="rb-val" style="color:var(--teal)">Clear</div></div>
+        <div class="rb-row"><div class="rb-label">F2 Live monitor</div><div class="rb-track"><div style="width:100%;height:100%;background:var(--blue-bg)"></div></div><div class="rb-val" style="color:var(--blue)">Active</div></div>
+        <div class="rb-row" style="margin-bottom:0"><div class="rb-label">F3 Session close</div><div class="rb-track"><div style="width:100%;height:100%;background:var(--border)"></div></div><div class="rb-val">Pending</div></div>
+      </div></div>
+      <div class="panel"><div class="panel-header"><span class="panel-title">Daily log</span><span class="panel-tag tag-muted">This week</span></div><div class="panel-body">
+        <div class="rb-row"><div class="rb-label">Monday</div><div class="rb-track"><div class="rb-fill" style="width:60%"></div></div><div class="rb-val" style="color:var(--teal)">+$112</div></div>
+        <div class="rb-row"><div class="rb-label">Tuesday</div><div class="rb-track"><div class="rb-fill" style="width:50%"></div></div><div class="rb-val" style="color:var(--teal)">+$80</div></div>
+        <div class="rb-row"><div class="rb-label">Wednesday</div><div class="rb-track"><div class="rb-fill" style="width:33%;background:var(--red)"></div></div><div class="rb-val" style="color:var(--red)">-$40</div></div>
+        <div class="rb-row" style="margin-bottom:0"><div class="rb-label">Today</div><div class="rb-track"><div class="rb-fill" id="d-today-bar" style="width:35%"></div></div><div class="rb-val" id="d-today-v" style="color:var(--teal)">+$84</div></div>
+      </div></div>
+    </div></div>
+
+    <!-- SCANNER VIEW -->
+    <div class="view" id="d-scanner"><div class="panel"><div class="panel-header"><span class="panel-title">Pair scanner</span><span class="panel-tag tag-live">Live</span></div><div class="panel-body"><div class="pair-grid">
+      <div class="pair-card"><div class="pair-name">XAUUSD</div><div class="pair-bias"><span class="bd b-bull"></span><span class="bias-txt">Bullish · H4+H1 aligned</span></div><span class="pair-sig ps-s">Setup detected</span></div>
+      <div class="pair-card"><div class="pair-name">NAS100</div><div class="pair-bias"><span class="bd b-bull"></span><span class="bias-txt">Bullish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+      <div class="pair-card"><div class="pair-name">GBPUSD</div><div class="pair-bias"><span class="bd b-bear"></span><span class="bias-txt">Bearish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+      <div class="pair-card"><div class="pair-name">EURUSD</div><div class="pair-bias"><span class="bd b-range"></span><span class="bias-txt">Ranging</span></div><span class="pair-sig ps-b">Regime blocked</span></div>
+      <div class="pair-card"><div class="pair-name">US30</div><div class="pair-bias"><span class="bd b-bull"></span><span class="bias-txt">Bullish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+      <div class="pair-card"><div class="pair-name">GBPJPY</div><div class="pair-bias"><span class="bd b-bear"></span><span class="bias-txt">Bearish bias</span></div><span class="pair-sig ps-w">Watching</span></div>
+    </div></div></div></div>
+
+  </main>
+</div>
+
+<script>
+// ── PROGRESS CONFIG ──
+const STEPS = ['s-signup','s-quiz1','s-quiz2','s-quiz3','s-mt5','s-telegram','s-risk','s-ready'];
+function buildProgress(screenId){
+  const idx = STEPS.indexOf(screenId);
+  const pid = 'prog-'+screenId.replace('s-','');
+  const el = document.getElementById(pid);
+  if(!el) return;
+  el.innerHTML = '';
+  STEPS.forEach((_,i)=>{
+    const d = document.createElement('div');
+    d.className = 'ob-step'+(i<idx?' done':i===idx?' active':'');
+    el.appendChild(d);
+  });
+}
+
+// ── SCREEN NAVIGATION ──
+let current = 's-welcome';
+function go(id){
+  const cur = document.getElementById(current);
+  cur.classList.add('exit');
+  setTimeout(()=>{cur.classList.remove('active','exit')},400);
+  setTimeout(()=>{
+    const next = document.getElementById(id);
+    next.classList.add('active');
+    buildProgress(id);
+    current = id;
+  },200);
+}
+
+// ── QUIZ HELPERS ──
+function selectQuiz(el,val){
+  el.closest('.quiz-opts').querySelectorAll('.quiz-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+let selectedFirm = 'GOAT';
+function selectFirm(el,firm){
+  document.querySelectorAll('.firm-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedFirm = firm;
+}
+
+// ── MT5 TEST ──
+function testMT5(){
+  const s = document.getElementById('mt5-status');
+  s.className = 'conn-status conn-testing';
+  s.innerHTML = '<span class="conn-dot" style="background:var(--blue)"></span><span>Testing connection...</span>';
+  setTimeout(()=>{
+    s.className = 'conn-status conn-ok';
+    s.innerHTML = '<span class="conn-dot" style="background:var(--teal)"></span><span>Connected — GOATFunded-Live01 · Account verified</span>';
+    setTimeout(()=>go('s-telegram'),800);
+  },1800);
+}
+
+// ── TELEGRAM TEST ──
+function testTelegram(){
+  const s = document.getElementById('tg-status');
+  s.className = 'conn-status conn-testing';
+  s.innerHTML = '<span class="conn-dot" style="background:var(--blue)"></span><span>Verifying code GE-7291...</span>';
+  setTimeout(()=>{
+    s.className = 'conn-status conn-ok';
+    s.innerHTML = '<span class="conn-dot" style="background:var(--teal)"></span><span>Verified — @NtandoMiya · Alerts active</span>';
+    setTimeout(()=>go('s-risk'),800);
+  },1600);
+}
+
+// ── LAUNCH DASHBOARD ──
+function launchDashboard(){
+  const name = document.getElementById('inp-name')?.value || 'Ntando Miya';
+  document.getElementById('d-name-badge').textContent = name;
+  document.getElementById('d-firm-badge').textContent = selectedFirm+' · Step 1';
+  const screens = document.querySelectorAll('.screen');
+  screens.forEach(s=>{s.style.opacity='0';s.style.pointerEvents='none'});
+  const shell = document.getElementById('app-shell');
+  shell.classList.add('active');
+  updateUI();
+  startLiveFeed();
+}
+
+function backToOnboarding(){
+  const shell = document.getElementById('app-shell');
+  shell.classList.remove('active');
+  shell.style.opacity='';shell.style.pointerEvents='';
+  resetSim();
+  go('s-welcome');
+}
+
+// ── DASHBOARD STATE ──
+const S = {pnl:84,equity:8344,equityHigh:8344,trades:1,openRisk:40,earned:344,locked:false,softStop:false};
+const PAIRS=['XAUUSD','GBPUSD','NAS100','US30','GBPJPY'];
+const PATS=['Breakout & Retest','Unicorn Model','Sniper Entry','Breaker Block FVG'];
+const CONFS=[74,78,82,71,68,85];
+function fmtU(n){return '$'+Math.round(n).toLocaleString()}
+
+function updateUI(){
+  const floor = S.equityHigh - 400;
+  const pct = Math.min(100,Math.round(S.earned/800*100));
+  const pnlPct = Math.min(100,Math.abs(S.pnl)/240*100);
+
+  document.getElementById('h-pnl').textContent=(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl);
+  document.getElementById('h-pnl').className='rg-metric-value '+(S.pnl>=0?'v-teal':S.pnl<=-160?'v-red':'v-amber');
+  document.getElementById('h-pnl-s').textContent=(S.pnl>=0?'+':'')+((S.pnl/8000)*100).toFixed(2)+'% today';
+  document.getElementById('h-pnl-bar').style.width=pnlPct+'%';
+  document.getElementById('h-pnl-bar').className='prog-fill'+(S.pnl<=-160?' danger':S.pnl<0?' warn':'');
+  document.getElementById('h-floor').textContent=fmtU(floor);
+  document.getElementById('h-floor-s').textContent='Rolling · High '+fmtU(S.equityHigh);
+  document.getElementById('h-trades').innerHTML=S.trades+' <span style="font-size:18px;color:var(--muted)">/ 3</span>';
+  document.getElementById('h-trades-s').textContent=Math.max(0,3-S.trades)+' remaining';
+  document.getElementById('h-risk').textContent='$'+S.openRisk;
+  document.getElementById('h-risk-s').textContent='$'+(120-S.openRisk)+' headroom';
+  document.getElementById('h-risk-bar').style.width=(S.openRisk/120*100)+'%';
+  document.getElementById('h-tgt').innerHTML='$'+S.earned+' <span style="font-size:16px;color:var(--muted)">/ $800</span>';
+  document.getElementById('h-tgt-s').textContent=pct+'% · Valid days 2/3';
+  document.getElementById('h-tgt-bar').style.width=pct+'%';
+  document.getElementById('d-ring').style.strokeDashoffset=283-(283*(pct/100));
+  document.getElementById('d-ring-pct').textContent=pct+'%';
+  document.getElementById('d-earned').textContent='$'+S.earned;
+  document.getElementById('d-remain').textContent='$'+(800-S.earned);
+  // Risk breakdown panel removed — guard these refs with ?. to avoid errors
+  const rbPnl=document.getElementById('rb-pnl');
+  if(rbPnl){rbPnl.style.width=pnlPct+'%';rbPnl.className='rb-fill'+(S.pnl<=-160?' high':S.pnl<0?' mid':'');}
+  const rbPnlV=document.getElementById('rb-pnl-v');
+  if(rbPnlV){rbPnlV.textContent=(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl);rbPnlV.style.color=S.pnl>=0?'var(--teal)':S.pnl<=-160?'var(--red)':'var(--amber)';}
+  const rbEq=document.getElementById('rb-eq');
+  if(rbEq){rbEq.style.width=Math.min(100,((S.equity-7200)/1200*100))+'%';}
+  const rbEqV=document.getElementById('rb-eq-v');
+  if(rbEqV){rbEqV.textContent=fmtU(S.equity);}
+  document.getElementById('d-today-bar').style.width=pnlPct+'%';
+  document.getElementById('d-today-bar').className='rb-fill'+(S.pnl<=-160?' high':S.pnl<0?' mid':'');
+  document.getElementById('d-today-v').textContent=(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl);
+  document.getElementById('d-today-v').style.color=S.pnl>=0?'var(--teal)':S.pnl<=-160?'var(--red)':'var(--amber)';
+
+  // ── ACCOUNT SURVIVAL ──
+  const distToHardStop = 240 + S.pnl; // how far until hard stop (positive = safe)
+  const distToFirmLimit = 400 + S.pnl;
+  const blockedCount = Math.max(0, S.trades - 1) + 14; // base + new blocks sim
+  const savedAmt = blockedCount * 40 - 40; // each block saved $40, minus taken loss
+  const passProb = S.locked ? 0 : S.pnl <= -160 ? 28 : S.pnl < 0 ? 51 : Math.min(98, 73 + Math.round(S.earned / 800 * 25));
+  const riskState = S.locked ? 'high' : S.pnl <= -160 ? 'medium' : distToHardStop < 80 ? 'medium' : 'low';
+
+  const svCard = document.getElementById('sv-card');
+  const svBadge = document.getElementById('sv-state-badge');
+  svCard.className = 'survival-card state-' + riskState;
+
+  const stateLabels = {low:'Today\'s Risk: LOW', medium:'Today\'s Risk: ELEVATED', high:'SESSION LOCKED'};
+  const badgeClasses = {low:'sv-state svs-low', medium:'sv-state svs-medium', high:'sv-state svs-high'};
+  svBadge.textContent = stateLabels[riskState];
+  svBadge.className = badgeClasses[riskState];
+
+  const svDist = document.getElementById('sv-distance');
+  const svDistSub = document.getElementById('sv-distance-sub');
+  svDist.textContent = S.locked ? '$0' : '$' + Math.max(0, distToHardStop);
+  svDist.className = 'sv-metric-value ' + (riskState === 'low' ? 'v-teal' : riskState === 'medium' ? 'v-amber' : 'v-red');
+  svDistSub.textContent = S.locked ? 'Hard stop breached — session locked' : '$' + Math.max(0, distToFirmLimit) + ' to firm limit · $' + Math.max(0, distToHardStop) + ' to internal stop';
+
+  const svProb = document.getElementById('sv-prob');
+  const svProbSub = document.getElementById('sv-prob-sub');
+  svProb.textContent = passProb + '%';
+  svProb.className = 'sv-metric-value ' + (passProb >= 60 ? 'v-teal' : passProb >= 35 ? 'v-amber' : 'v-red');
+  svProbSub.textContent = S.locked ? 'Session locked — no new trades today' : 'Based on P&L pace · ' + (2) + ' valid days · Days remaining';
+
+  document.getElementById('sv-blocked').textContent = blockedCount;
+  const svSaved = document.getElementById('sv-saved');
+  const svSavedDetail = document.getElementById('sv-saved-detail');
+  const saved = Math.max(0, savedAmt);
+  svSaved.textContent = '$' + saved;
+  svSaved.className = 'sv-metric-value ' + (saved > 0 ? 'v-teal' : 'v-white');
+  const blockedToday = Math.max(0, S.trades > 3 ? S.trades - 3 : 0) + (S.locked ? 1 : 0) + 2;
+  svSavedDetail.innerHTML = `<div class="sv-saved-line"><span class="neg">↓</span><span>${blockedToday} signals blocked</span></div><div class="sv-saved-line"><span class="neg">↓</span><span>Potential loss: -$${blockedToday * 40}</span></div><div class="sv-saved-line"><span class="pos">✓</span><span>Actual loss: -$${Math.max(0, Math.abs(Math.min(0, S.pnl)))}</span></div>`;
+  const hero=document.getElementById('d-hero');
+  const fp1=document.getElementById('fp1'),fp2=document.getElementById('fp2');
+  const rgb=document.getElementById('d-rg-badge');
+  const sp=document.getElementById('d-sess-pill');
+  const st=document.getElementById('d-sess-txt');
+  const rgt=document.getElementById('d-rg-txt');
+  const p=document.getElementById('d-pulse');
+  const rp=document.getElementById('d-rg-pulse');
+
+  if(S.locked){
+    hero.className='rg-hero lock-state';fp1.className='fp fp-block';fp1.textContent='F1 Locked';fp2.className='fp fp-block';fp2.textContent='F2 Blocked';
+    rgb.className='rg-badge lock-state';rgt.textContent='Risk Guard · Locked';
+    sp.className='session-status lock-state';st.textContent='Locked';st.style.color='var(--red)';
+    p.className='pulse danger';rp.className='pulse danger';
+    document.getElementById('d-locked').classList.add('show');
+  } else if(S.softStop){
+    hero.className='rg-hero warn-state';fp1.className='fp fp-warn';fp1.textContent='F1 Warn';fp2.className='fp fp-active';fp2.textContent='F2 Active';
+    rgb.className='rg-badge warn-state';rgt.textContent='Risk Guard · Soft stop';
+    sp.className='session-status warn-state';st.textContent='Caution';st.style.color='var(--amber)';
+    p.className='pulse warn';rp.className='pulse warn';
+    document.getElementById('d-locked').classList.remove('show');
+  } else {
+    hero.className='rg-hero';fp1.className='fp fp-clear';fp1.textContent='F1 Clear';fp2.className='fp fp-active';fp2.textContent='F2 Active';
+    rgb.className='rg-badge';rgt.textContent='Risk Guard · Active';
+    sp.className='session-status';st.textContent='Active';st.style.color='var(--teal)';
+    p.className='pulse';rp.className='pulse';
+    document.getElementById('d-locked').classList.remove('show');
+  }
+}
+
+function toast(type,lines){
+  const w=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className='toast t-'+type;
+  t.innerHTML=lines.join('<br>');
+  w.appendChild(t);
+  setTimeout(()=>{t.style.animation='none';t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400)},4000);
+}
+
+function feedInsert(html){
+  document.getElementById('d-feed').insertAdjacentHTML('afterbegin',html);
+  document.getElementById('d-feed-full').insertAdjacentHTML('afterbegin',html);
+}
+
+function fireSignal(){
+  if(S.locked){toast('block',['🔴 Session locked','Hard stop active — no signals']);return;}
+  const pair=PAIRS[Math.floor(Math.random()*PAIRS.length)];
+  const pat=PATS[Math.floor(Math.random()*PATS.length)];
+  const conf=CONFS[Math.floor(Math.random()*CONFS.length)];
+  const now=new Date(),t=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  let cls,dec,lines;
+  if(S.softStop||S.trades>=2){
+    cls='si-w';dec='WRN';
+    lines=['⚠️ SETUP — REDUCED SIZE',pair+' · '+pat,'Risk: $20 (soft stop active)','P&L: '+(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl)];
+    toast('warn',lines);S.pnl+=20;S.equity+=20;S.equityHigh=Math.max(S.equityHigh,S.equity);S.earned+=20;S.trades++;
+  } else {
+    cls='si-c';dec='CLR';
+    lines=['🟢 SETUP DETECTED',pair+' · '+pat+' · '+conf+'%','P&L: '+(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl)+' · Trades: '+S.trades+'/3'];
+    toast('clear',lines);S.pnl+=40;S.equity+=40;S.equityHigh=Math.max(S.equityHigh,S.equity);S.earned+=40;S.trades++;
+    if(S.trades>=3)S.softStop=true;
+  }
+  const html=`<div class="sig-item" style="animation:flashIn 0.5s ease"><div class="sig-ind ${cls}">${dec}</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">${pair}</span><span class="sig-pat">${pat}</span><span class="sig-conf">${conf}%</span></div><div class="sig-det">${dec==='WRN'?'Half size · $20 risk':'Cleared · $40 risk'}</div></div><div class="sig-time">${t}</div></div>`;
+  feedInsert(html);
+  document.getElementById('d-journal').insertAdjacentHTML('afterbegin',`<div class="j-row" style="animation:flashIn 0.5s ease"><span class="j-p">${pair}</span><span style="color:var(--muted2)">${pat.split(' ')[0]}</span><span style="color:var(--muted2)">—</span><span class="j-out j-open">Open</span><span style="color:var(--blue);font-family:'DM Mono',monospace">+$0</span></div>`);
+  updateUI();
+}
+
+function takeLoss(){
+  if(S.locked)return;
+  S.pnl-=40;S.equity-=40;S.trades++;
+  if(S.pnl<=-160)S.softStop=true;
+  if(S.pnl<=-240){S.locked=true;S.softStop=false;}
+  const pair=PAIRS[Math.floor(Math.random()*PAIRS.length)];
+  const now=new Date(),t=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(S.locked){
+    toast('block',['🔴 SESSION LOCKED','Hard stop hit: -$'+Math.abs(S.pnl),'Revenge lock: 24h active']);
+  } else if(S.softStop){
+    toast('warn',['⚠️ SOFT STOP','Daily P&L: -$'+Math.abs(S.pnl),'Signals now half size']);
+  } else {
+    toast('block',['↓ Loss taken · '+pair,'Daily P&L: '+(S.pnl>=0?'+':'')+'$'+Math.abs(S.pnl)]);
+  }
+  const cls=S.locked?'si-b':'si-w';const dec=S.locked?'BLK':'WRN';
+  const html=`<div class="sig-item" style="animation:flashIn 0.5s ease"><div class="sig-ind ${cls}">${dec}</div><div class="sig-body"><div class="sig-top"><span class="sig-pair">${pair}</span><span class="sig-pat">${S.locked?'Session locked':'Loss — soft stop'}</span></div><div class="sig-det">P&L: -$${Math.abs(S.pnl)} · ${S.locked?'No further trades':'Half size active'}</div></div><div class="sig-time">${t}</div></div>`;
+  feedInsert(html);
+  updateUI();
+}
+
+function resetSim(){S.pnl=84;S.equity=8344;S.equityHigh=8344;S.trades=1;S.openRisk=40;S.earned=344;S.locked=false;S.softStop=false;updateUI();toast('clear',['↺ Session reset']);}
+
+function dView(id,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── MT5 CONNECTION INDICATOR ──────────────────────────────────────────────
+function setMT5Indicator(connected, reconnecting){
+  const dot=document.getElementById('mt5-dot');
+  const txt=document.getElementById('mt5-txt');
+  if(!dot||!txt)return;
+  if(reconnecting){
+    dot.style.background='var(--amber)';txt.textContent='Reconnecting…';txt.style.color='var(--amber)';
+  } else if(connected){
+    dot.style.background='var(--teal)';txt.textContent='MT5 Live';txt.style.color='var(--teal)';
+  } else {
+    dot.style.background='var(--amber)';txt.textContent='MT5 Cached';txt.style.color='var(--amber)';
+  }
+}
+
+// ── LIVE DATA FETCH ───────────────────────────────────────────────────────
+let _fetchInterval=null;
+
+async function fetchState(){
+  try{
+    const resp=await fetch('/state',{signal:AbortSignal.timeout(4000)});
+    if(!resp.ok)throw new Error(resp.status);
+    const d=await resp.json();
+    // Map API response onto simulation state object
+    S.pnl       = d.daily_pnl ?? S.pnl;
+    S.equity    = d.equity    ?? S.equity;
+    S.equityHigh= d.equity_high ?? S.equityHigh;
+    S.trades    = d.trades_today ?? S.trades;
+    S.openRisk  = d.open_risk ?? S.openRisk;
+    S.locked    = d.session_locked ?? S.locked;
+    S.softStop  = d.soft_stop_active ?? S.softStop;
+    // Earned = progress toward target
+    if(d.target && d.target_progress_pct != null){
+      S.earned = Math.round(d.target * d.target_progress_pct / 100);
+    }
+    setMT5Indicator(d.mt5_connected, false);
+    updateUI();
+  } catch(e){
+    setMT5Indicator(false, true);
+    // Keep UI running on stale data — don't reset S
+  }
+}
+
+function startLiveFeed(){
+  fetchState();  // immediate call
+  if(_fetchInterval)clearInterval(_fetchInterval);
+  _fetchInterval=setInterval(fetchState,5000);
+}
+
+// Auto-start if dashboard is already open (direct URL access)
+if(document.getElementById('app-shell')?.classList.contains('active')){
+  startLiveFeed();
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────
+setInterval(()=>{
+  const d=new Date(),p=x=>String(x).padStart(2,'0');
+  const el=document.getElementById('d-clock');
+  if(el)el.textContent=p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+},1000);
+</script>
+</body>
+</html>

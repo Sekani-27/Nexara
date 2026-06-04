@@ -17,9 +17,9 @@ python-dotenv>=1.0
 qdrant-client>=1.7
 sentence-transformers>=2.2
 
-# ── API server (optional — for future web dashboard) ─────────────────────────
+# ── Dashboard API server ─────────────────────────────────────────────────────
 fastapi>=0.110
-uvicorn>=0.29
+uvicorn[standard]>=0.29
 
 # ── Testing ──────────────────────────────────────────────────────────────────
 pytest>=8.0
