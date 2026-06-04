@@ -37,15 +37,31 @@ if _ROOT not in sys.path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse
-import time
 import logging
+import sys
+import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+# ── Logging: INFO/DEBUG → stdout, WARNING+ → stderr ──────────────────────────
+# Railway (and most log aggregators) treat anything written to stderr as an
+# error and highlights it red. Normal scan messages are INFO — route them to
+# stdout so only genuine warnings/errors appear as errors in the Railway UI.
+_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+_stdout_handler = logging.StreamHandler(sys.stdout)
+_stdout_handler.setLevel(logging.DEBUG)
+_stdout_handler.addFilter(lambda r: r.levelno < logging.WARNING)  # INFO + DEBUG only
+_stdout_handler.setFormatter(_fmt)
+
+_stderr_handler = logging.StreamHandler(sys.stderr)
+_stderr_handler.setLevel(logging.WARNING)   # WARNING, ERROR, CRITICAL
+_stderr_handler.setFormatter(_fmt)
+
+logging.root.setLevel(logging.INFO)
+logging.root.addHandler(_stdout_handler)
+logging.root.addHandler(_stderr_handler)
+
 logger = logging.getLogger("trader_copilot.multi_runner")
 
 
