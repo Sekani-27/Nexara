@@ -79,25 +79,15 @@ CURRENCY_PAIRS  = {
 COMMODITY_PAIRS = {"XAUUSDm"}           # Gold — 4H/15M, price-unit pip precision
 INDEX_PAIRS     = {"USTEC_x100m"}       # Nasdaq-100 — 4H/15M, point-unit precision
 
-# Explicit scan order — commodity/index pairs placed early so they hit
-# TwelveData before the rate-limit window fills.  16 pairs total.
+# Explicit scan order — XAUUSDm first so it hits TwelveData before the
+# rate-limit window fills.  6 pairs active.
 ALL_PAIRS = [
+    "XAUUSDm",      # Gold — scanned first, before rate-limit window fills
     "EURUSDm",
-    "XAUUSDm",      # Gold — scanned second, before rate-limit window fills
-    "USTEC_x100m",  # Nasdaq — scanned third
     "GBPUSDm",
     "USDJPYm",
     "GBPJPYm",
-    "EURJPYm",
-    "USDCHFm",
-    "AUDUSDm",
-    "NZDUSDm",
-    "USDCADm",
-    "USDZARm",
-    "EURAUDm",
-    "EURCADm",
     "CADJPYm",
-    "GBPCADm",
 ]
 
 
@@ -378,6 +368,7 @@ def run(
                     twelvedata=twelvedata,
                 ):
                     signals_fired += 1
+                time.sleep(10)  # rate-limit buffer between pair scans
 
             update_health(pairs=len(pairs), cycle=cycle)
             logger.info(
