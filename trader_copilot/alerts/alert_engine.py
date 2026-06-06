@@ -21,8 +21,8 @@ import logging
 import os
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
 from ..core.structures import TradeSignal, Direction
 
 try:
@@ -82,6 +82,9 @@ DIRECTION_EMOJI = {
 
 class AlertEngine:
 
+    # How long a pending setup is suppressed before it expires.
+    PENDING_EXPIRY_HOURS = 4
+
     def __init__(
         self,
         webhook_urls: Optional[List[str]] = None,
@@ -91,6 +94,13 @@ class AlertEngine:
         self.webhook_urls = webhook_urls or []
         self.log_path     = log_path
         self.risk_guard   = risk_guard   # set to a RiskGuard instance to enable
+
+        # Bug 3 — pending setup dedup + expiry.
+        # Key: "symbol:pattern:direction:entry_price_4dp"
+        # Value: UTC datetime when this setup was first logged.
+        # Subsequent calls within PENDING_EXPIRY_HOURS are silently suppressed.
+        # After expiry the setup is dropped entirely (retest never confirmed).
+        self._pending_seen: Dict[str, datetime] = {}
 
         # Surface Risk Guard status in every startup log so Railway makes it obvious.
         if self.risk_guard is not None and _rg is not None:
@@ -330,9 +340,49 @@ class AlertEngine:
         Called when a Breakout & Retest setup is confirmed but the retest
         has not yet occurred. Prints a watch-level alert and logs to file.
 
-        This tells the trader: setup is valid, limit order level is ready,
-        waiting for price to return to the OB.
+        Bug 3 — dedup + expiry:
+          • First call: log, write to file, send Telegram, record timestamp.
+          • Subsequent calls within PENDING_EXPIRY_HOURS: silently suppressed.
+          • After PENDING_EXPIRY_HOURS: the setup is stale (retest never came) —
+            log a one-time expiry warning, remove from tracker, and return without
+            sending.  The next genuine setup on this pair will create a new entry.
         """
+        # ── Pending dedup / expiry gate ───────────────────────────────────────
+        dir_str = direction.value if direction else "none"
+        key     = f"{symbol}:{pattern}:{dir_str}:{round(entry_price, 4)}"
+        now     = datetime.now(timezone.utc)
+        expiry  = timedelta(hours=self.PENDING_EXPIRY_HOURS)
+
+        if key in self._pending_seen:
+            age = now - self._pending_seen[key]
+            if age < expiry:
+                logger.debug(
+                    "Pending suppressed (%.1fh / %.0fh) — %s",
+                    age.total_seconds() / 3600,
+                    self.PENDING_EXPIRY_HOURS,
+                    key,
+                )
+                return
+            else:
+                # Expired: retest never confirmed within the window.
+                logger.warning(
+                    "Pending setup EXPIRED after %.1fh without retest — "
+                    "setup no longer valid: %s  watch=%.5f",
+                    age.total_seconds() / 3600,
+                    key,
+                    entry_price,
+                )
+                del self._pending_seen[key]
+                return   # Do not re-log an expired setup
+
+        # ── First occurrence — record and dispatch ────────────────────────────
+        self._pending_seen[key] = now
+        logger.info(
+            "Pending setup FIRST LOG — %s %s  watch=%.5f  "
+            "will suppress re-logs for %dh",
+            symbol, pattern, entry_price, self.PENDING_EXPIRY_HOURS,
+        )
+
         alert_text = self.format_pending_alert(
             symbol=symbol,
             pattern=pattern,
@@ -358,6 +408,8 @@ class AlertEngine:
                 logger.info("Pending setup logged: %s %s — watch %.5f", symbol, pattern, entry_price)
             except Exception as exc:
                 logger.error("Failed to write pending log: %s", exc, exc_info=True)
+
+        self._send_telegram(alert_text)
 
         if self.webhook_urls:
             self._send_webhook(alert_text)

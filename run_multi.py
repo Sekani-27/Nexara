@@ -40,7 +40,7 @@ import argparse
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 # ── Logging: INFO/DEBUG → stdout, WARNING+ → stderr ──────────────────────────
@@ -109,32 +109,55 @@ class AlertTracker:
     """
     Prevents the same setup firing as an alert on every poll cycle.
 
-    A setup is keyed by: symbol + direction + entry_price (rounded to 4dp).
-    Each registered key expires after `ttl_cycles` poll cycles.
-    Default ttl_cycles=5 at 30-minute intervals ≈ 2.5-hour suppression window.
+    Key: symbol + pattern + direction + candle-open-time (YYYYMMDDHHMM).
+    Using the candle's fixed open timestamp instead of entry_price means the key
+    is stable across all poll cycles — entry_price on a partial candle changes
+    every tick (particularly visible on USTEC where the 15M close shifts by
+    several points between polls, defeating a price-based key entirely).
+
+    TTL default: 48 cycles ≈ 24 hours at 30-minute intervals.  This prevents
+    the same setup from re-firing within the same trading day while still
+    allowing a legitimately new setup on the same pair the next day.
     """
 
-    def __init__(self, ttl_cycles: int = 5):
+    STALE_HOURS = 2   # signals older than this are dropped before even checking
+
+    def __init__(self, ttl_cycles: int = 48):
         self.ttl_cycles = ttl_cycles
         self._active: Dict[str, int] = {}
 
-    def _key(self, symbol: str, direction: str, entry_price: float) -> str:
-        return f"{symbol}:{direction}:{round(entry_price, 4)}"
+    @staticmethod
+    def _normalise_ts(ts: datetime) -> datetime:
+        """Return a UTC-aware datetime; treat naive datetimes as UTC."""
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts
 
-    def is_duplicate(self, symbol: str, direction: str, entry_price: float) -> bool:
-        return self._key(symbol, direction, entry_price) in self._active
+    def _key(self, symbol: str, pattern: str, direction: str, candle_ts: datetime) -> str:
+        ts_str = self._normalise_ts(candle_ts).strftime("%Y%m%d%H%M")
+        return f"{symbol}:{pattern}:{direction}:{ts_str}"
 
-    def register(self, symbol: str, direction: str, entry_price: float):
-        key = self._key(symbol, direction, entry_price)
+    def is_stale(self, candle_ts: datetime) -> bool:
+        """Return True if the candle that generated the signal is too old to trade."""
+        age = datetime.now(timezone.utc) - self._normalise_ts(candle_ts)
+        return age > timedelta(hours=self.STALE_HOURS)
+
+    def is_duplicate(self, symbol: str, pattern: str,
+                     direction: str, candle_ts: datetime) -> bool:
+        return self._key(symbol, pattern, direction, candle_ts) in self._active
+
+    def register(self, symbol: str, pattern: str,
+                 direction: str, candle_ts: datetime):
+        key = self._key(symbol, pattern, direction, candle_ts)
         self._active[key] = self.ttl_cycles
-        logger.debug(f"Alert registered: {key} | TTL: {self.ttl_cycles} cycles")
+        logger.debug("Alert registered: %s | TTL: %d cycles", key, self.ttl_cycles)
 
     def tick(self):
         """Age all active keys by one cycle; remove expired ones."""
         expired = [k for k, ttl in self._active.items() if ttl <= 1]
         for k in expired:
             del self._active[k]
-            logger.debug(f"Alert expired: {k}")
+            logger.debug("Alert expired: %s", k)
         for k in self._active:
             self._active[k] -= 1
 
@@ -204,9 +227,32 @@ def scan_pair(
             logger.info(f"{symbol:10s} — No setup this cycle")
             return False
 
-        if tracker.is_duplicate(symbol, signal.direction.value, signal.entry_price):
-            logger.info(f"{symbol:10s} — Duplicate suppressed "
-                        f"({signal.direction.value.upper()} @ {signal.entry_price:.5f})")
+        # ── Bug 2: Staleness gate ─────────────────────────────────────────
+        # signal.timestamp is the candle's open time (fixed), not wall-clock.
+        # If the candle that produced this setup is older than STALE_HOURS,
+        # the market has moved on — do not send an alert for a dead setup.
+        if tracker.is_stale(signal.timestamp):
+            age_h = (
+                datetime.now(timezone.utc)
+                - AlertTracker._normalise_ts(signal.timestamp)
+            ).total_seconds() / 3600
+            logger.warning(
+                f"{symbol:10s} — STALE signal dropped "
+                f"(candle {signal.timestamp} is {age_h:.1f}h old, "
+                f"limit={AlertTracker.STALE_HOURS}h)"
+            )
+            return False
+
+        # ── Bug 1: Duplicate gate ─────────────────────────────────────────
+        # Key = symbol:pattern:direction:candle_open_time — stable across every
+        # poll cycle regardless of how the live close price fluctuates.
+        if tracker.is_duplicate(symbol, signal.pattern,
+                                 signal.direction.value, signal.timestamp):
+            logger.info(
+                f"{symbol:10s} — Duplicate suppressed "
+                f"({signal.pattern} {signal.direction.value.upper()} "
+                f"candle@{signal.timestamp})"
+            )
             return False
 
         # ── Signal confirmed ──────────────────────────────────────────────
@@ -215,7 +261,8 @@ def scan_pair(
             f"Entry: {signal.entry_price:.5f} | "
             f"SL: {signal.stop_loss:.5f} | "
             f"Score: {signal.confluence_score}/5 | "
-            f"Pattern: {getattr(signal, 'pattern', getattr(signal, 'pattern_name', '—'))}"
+            f"Pattern: {signal.pattern} | "
+            f"Candle: {signal.timestamp}"
         )
 
         if not dry_run:
@@ -223,7 +270,8 @@ def scan_pair(
         else:
             logger.info(f"{symbol:10s} — [DRY-RUN] Alert suppressed")
 
-        tracker.register(symbol, signal.direction.value, signal.entry_price)
+        tracker.register(symbol, signal.pattern,
+                         signal.direction.value, signal.timestamp)
         return True
 
     except Exception as exc:

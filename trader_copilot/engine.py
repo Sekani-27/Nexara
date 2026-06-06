@@ -219,6 +219,12 @@ class TraderCopilot:
         else:
             take_profit = result.channel_high
 
+        # Use the actual retest candle's open timestamp — not wall-clock time.
+        # This ensures the dedup key and the staleness check in run_multi.py
+        # both see a stable, candle-anchored time rather than "now", which
+        # changes on every poll cycle and defeats both checks.
+        retest_candle_ts = candles_30m[result.retest_index].timestamp
+
         signal = TradeSignal(
             symbol=self.symbol,
             direction=result.direction,
@@ -226,7 +232,7 @@ class TraderCopilot:
             stop_loss=result.stop_loss,
             take_profit=take_profit,
             timeframe="30M",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=retest_candle_ts,
             pattern=result.pattern_name,
             confluence_score=self._score_breakout_retest(result),
             fvg_present=result.fvg is not None,
