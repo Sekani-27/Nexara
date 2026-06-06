@@ -256,7 +256,7 @@ class AlertEngine:
         # ── 2. Console (always visible in Railway logs) ───────────────────────
         print(alert_text)
 
-        # ── 3. Append to .jsonl log ───────────────────────────────────────────
+        # ── 3. Append to .jsonl log (kept as lightweight backup) ─────────────
         if self.log_path:
             try:
                 with open(self.log_path, "a") as f:
@@ -264,6 +264,21 @@ class AlertEngine:
                 logger.info("Alert logged to %s", self.log_path)
             except Exception as exc:
                 logger.error("Failed to write alert log: %s", exc, exc_info=True)
+
+        # ── 3b. SQLite journal (primary structured store) ────────────────────
+        # TRADE_JOURNAL_DB_PATH env var lets Railway point to a mounted volume.
+        # Falls back to the local file so local runs need no configuration.
+        try:
+            from ..journal.trade_journal import TradeJournal
+            _journal_path = os.getenv(
+                "TRADE_JOURNAL_DB_PATH", "trader_copilot_journal.db"
+            )
+            logger.info("Journal: writing signal to %s", _journal_path)
+            _journal = TradeJournal(db_path=_journal_path)
+            _trade_id = _journal.log_signal(signal)
+            logger.info("Journal: signal recorded — trade_id=%d", _trade_id)
+        except Exception as exc:
+            logger.error("Journal: log_signal() failed — %s", exc, exc_info=True)
 
         # ── 4. Telegram Bot API ───────────────────────────────────────────────
         self._send_telegram(alert_text)

@@ -49,6 +49,7 @@ class TradeRecord:
     close_time: Optional[str] = None
     pnl_rr: Optional[float] = None    # Result in R multiples (e.g. +2.0, -1.0)
     session: Optional[str] = None     # london / new_york etc
+    taken: bool = False               # True if the trader actually entered this trade
 
 
 class TradeJournal:
@@ -85,13 +86,11 @@ class TradeJournal:
             )
             """,
         ),
-        # Add future migrations below, incrementing the version number.
-        # Example:
-        # (
-        #     2,
-        #     "add ml_confidence column to trades",
-        #     "ALTER TABLE trades ADD COLUMN ml_confidence REAL",
-        # ),
+        (
+            2,
+            "add taken column — marks whether the trader actually entered the trade",
+            "ALTER TABLE trades ADD COLUMN taken INTEGER NOT NULL DEFAULT 0",
+        ),
     ]
 
     def __init__(self, db_path: str = "trader_copilot_journal.db"):
@@ -151,8 +150,8 @@ class TradeJournal:
                     symbol, direction, pattern, timeframe,
                     entry_price, stop_loss, take_profit, risk_reward,
                     confluence_score, fvg_present, ob_present, killzone_active,
-                    signal_time, notes, session
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    signal_time, notes, session, taken
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
                 signal.symbol,
                 signal.direction.value,
@@ -169,6 +168,7 @@ class TradeJournal:
                 signal.timestamp.isoformat(),
                 signal.notes,
                 session,
+                0,   # taken defaults to False; set via record_outcome() or a separate call
             ))
             trade_id = cur.lastrowid
             conn.commit()
@@ -181,6 +181,7 @@ class TradeJournal:
         outcome: Outcome,
         close_price: float,
         close_time: Optional[datetime] = None,
+        taken: bool = True,
     ):
         """Record the result of a trade after it closes."""
         if close_time is None:
@@ -204,9 +205,10 @@ class TradeJournal:
                     outcome = ?,
                     close_price = ?,
                     close_time = ?,
-                    pnl_rr = ?
+                    pnl_rr = ?,
+                    taken = ?
                 WHERE id = ?
-            """, (outcome.value, close_price, close_time.isoformat(), pnl_rr, trade_id))
+            """, (outcome.value, close_price, close_time.isoformat(), pnl_rr, int(taken), trade_id))
             conn.commit()
 
         print(f"[Journal] Outcome recorded — ID: {trade_id} | {outcome.value} | P&L: {pnl_rr:+.2f}R")

@@ -8,3 +8,6 @@ restartPolicyMaxRetries = 10
 
 [deploy.resources]
 memory = "512Mi"
+
+[deploy.mounts]
+mountPath = "/app/data"

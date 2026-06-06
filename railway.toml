@@ -10,3 +10,6 @@ healthcheckTimeout = 30
 
 [deploy.resources]
 memory = "512Mi"
+
+[deploy.mounts]
+mountPath = "/app/data"
