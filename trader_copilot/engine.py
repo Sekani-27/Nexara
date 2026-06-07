@@ -203,6 +203,7 @@ class TraderCopilot:
 
         # Retest not yet confirmed — fire pending alert and return None
         if result.retest_index is None:
+            breakout_candle_time = candles_30m[result.wedge_breakout_index].timestamp
             self.alert_engine.log_pending(
                 symbol=self.symbol,
                 pattern=result.pattern_name,
@@ -210,6 +211,7 @@ class TraderCopilot:
                 stop_loss=result.stop_loss,
                 notes=result.notes,
                 direction=result.direction,
+                candle_time=breakout_candle_time,
             )
             return None
 

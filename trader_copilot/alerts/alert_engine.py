@@ -299,8 +299,10 @@ class AlertEngine:
         stop_loss: float,
         notes: str,
         direction: Optional[Direction] = None,
+        candle_time: Optional[datetime] = None,
     ) -> str:
         direction_label = DIRECTION_EMOJI.get(direction, "—") if direction else "—"
+        display_time = candle_time if candle_time is not None else datetime.now(timezone.utc)
 
         alert = f"""
 ╔══════════════════════════════════════╗
@@ -311,7 +313,7 @@ class AlertEngine:
   Pattern     : {pattern}
   Direction   : {direction_label}
   Timeframe   : 30M
-  Time        : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+  Time        : {display_time.strftime('%Y-%m-%d %H:%M UTC')}
 
   Watch Level : {entry_price:.5f}  ← Limit entry if retested
   Stop Loss   : {stop_loss:.5f}
@@ -329,7 +331,9 @@ class AlertEngine:
         stop_loss: float,
         notes: str,
         direction: Optional[Direction] = None,
+        candle_time: Optional[datetime] = None,
     ) -> dict:
+        display_time = candle_time if candle_time is not None else datetime.now(timezone.utc)
         return {
             "type": "pending",
             "symbol": symbol,
@@ -338,7 +342,7 @@ class AlertEngine:
             "watch_level": entry_price,
             "sl": stop_loss,
             "timeframe": "30M",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": display_time.isoformat(),
             "notes": notes,
         }
 
@@ -350,6 +354,7 @@ class AlertEngine:
         stop_loss: float,
         notes: str,
         direction: Optional[Direction] = None,
+        candle_time: Optional[datetime] = None,
     ):
         """
         Called when a Breakout & Retest setup is confirmed but the retest
@@ -405,6 +410,7 @@ class AlertEngine:
             stop_loss=stop_loss,
             notes=notes,
             direction=direction,
+            candle_time=candle_time,
         )
         print(alert_text)
 
@@ -419,6 +425,7 @@ class AlertEngine:
                         stop_loss=stop_loss,
                         notes=notes,
                         direction=direction,
+                        candle_time=candle_time,
                     )) + "\n")
                 logger.info("Pending setup logged: %s %s — watch %.5f", symbol, pattern, entry_price)
             except Exception as exc:

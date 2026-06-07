@@ -24,7 +24,7 @@ from trader_copilot.config.pairs import PAIR_CONFIGS
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _make_signal(
-    symbol="XAUUSDm",
+    symbol="XAUUSD",
     direction=Direction.BEARISH,
     entry=2350.0,
     sl=2365.0,
@@ -53,7 +53,7 @@ def _make_signal(
     )
 
 
-def _make_engine(symbol="XAUUSDm", min_prob=0.0) -> MLEngine:
+def _make_engine(symbol="XAUUSD", min_prob=0.0) -> MLEngine:
     """
     Create an MLEngine with a throwaway model path (no file needed).
     min_probability=0.0 so no signal is filtered out by threshold.
@@ -87,7 +87,7 @@ def test_signal_to_dict_produces_valid_feature_dict():
     for key in required_keys:
         assert key in result, f"Missing key in signal dict: {key}"
 
-    assert result["symbol"]    == "XAUUSDm"
+    assert result["symbol"]    == "XAUUSD"
     assert result["direction"] == "bearish"
     assert result["pattern"]   == "Double Top"
     assert result["confluence_score"] == 4

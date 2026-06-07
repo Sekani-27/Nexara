@@ -1,7 +1,6 @@
 """
 Trader Copilot — Pair Configuration
 Pair-specific timeframes, sessions, and tolerances.
-Exness demo account symbol names (m suffix).
 """
 from dataclasses import dataclass
 from datetime import time
@@ -35,34 +34,34 @@ KILLZONE_WINDOWS = {
 }
 PAIR_CONFIGS = {
     # ── Majors ────────────────────────────────────────────────────────────────
-    "EURUSDm": PairConfig("EURUSDm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "GBPUSDm": PairConfig("GBPUSDm", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
-    "USDJPYm": PairConfig("USDJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
-    "USDCHFm": PairConfig("USDCHFm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "AUDUSDm": PairConfig("AUDUSDm", "30M", "5M", ["london","sydney"],           3.0, 2.0, 5.0, 0.0001),
-    "USDCADm": PairConfig("USDCADm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "NZDUSDm": PairConfig("NZDUSDm", "30M", "5M", ["london","new_york"],          3.0, 2.0, 5.0, 0.0001),
+    "EURUSD": PairConfig("EURUSD", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
+    "GBPUSD": PairConfig("GBPUSD", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
+    "USDJPY": PairConfig("USDJPY", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
+    "USDCHF": PairConfig("USDCHF", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
+    "AUDUSD": PairConfig("AUDUSD", "30M", "5M", ["london","sydney"],           3.0, 2.0, 5.0, 0.0001),
+    "USDCAD": PairConfig("USDCAD", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
+    "NZDUSD": PairConfig("NZDUSD", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
     # ── Euro crosses ──────────────────────────────────────────────────────────
-    "EURGBPm": PairConfig("EURGBPm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "EURJPYm": PairConfig("EURJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
-    "EURCHFm": PairConfig("EURCHFm", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
-    "EURAUDm": PairConfig("EURAUDm", "30M", "5M", ["london","sydney"],           4.0, 2.5, 6.0, 0.0001),
-    "EURCADm": PairConfig("EURCADm", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
-    "EURNZDm": PairConfig("EURNZDm", "30M", "5M", ["london","sydney"],           4.0, 2.5, 6.0, 0.0001),
+    "EURGBP": PairConfig("EURGBP", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
+    "EURJPY": PairConfig("EURJPY", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
+    "EURCHF": PairConfig("EURCHF", "30M", "5M", ["london","new_york"],         3.0, 2.0, 5.0, 0.0001),
+    "EURAUD": PairConfig("EURAUD", "30M", "5M", ["london","sydney"],           4.0, 2.5, 6.0, 0.0001),
+    "EURCAD": PairConfig("EURCAD", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
+    "EURNZD": PairConfig("EURNZD", "30M", "5M", ["london","sydney"],           4.0, 2.5, 6.0, 0.0001),
     # ── Pound crosses ─────────────────────────────────────────────────────────
-    "GBPJPYm": PairConfig("GBPJPYm", "30M", "5M", ["london","new_york","tokyo"], 5.0, 3.0, 8.0, 0.01),
-    "GBPCHFm": PairConfig("GBPCHFm", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
-    "GBPAUDm": PairConfig("GBPAUDm", "30M", "5M", ["london","sydney"],           5.0, 3.0, 7.0, 0.0001),
-    "GBPCADm": PairConfig("GBPCADm", "30M", "5M", ["london","new_york"],         5.0, 3.0, 7.0, 0.0001),
-    "GBPNZDm": PairConfig("GBPNZDm", "30M", "5M", ["london","sydney"],           5.0, 3.0, 7.0, 0.0001),
+    "GBPJPY": PairConfig("GBPJPY", "30M", "5M", ["london","new_york","tokyo"], 5.0, 3.0, 8.0, 0.01),
+    "GBPCHF": PairConfig("GBPCHF", "30M", "5M", ["london","new_york"],         4.0, 2.5, 6.0, 0.0001),
+    "GBPAUD": PairConfig("GBPAUD", "30M", "5M", ["london","sydney"],           5.0, 3.0, 7.0, 0.0001),
+    "GBPCAD": PairConfig("GBPCAD", "30M", "5M", ["london","new_york"],         5.0, 3.0, 7.0, 0.0001),
+    "GBPNZD": PairConfig("GBPNZD", "30M", "5M", ["london","sydney"],           5.0, 3.0, 7.0, 0.0001),
     # ── Yen crosses ───────────────────────────────────────────────────────────
-    "AUDJPYm": PairConfig("AUDJPYm", "30M", "5M", ["london","sydney","tokyo"],   4.0, 2.5, 6.0, 0.01),
-    "CADJPYm": PairConfig("CADJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
-    "CHFJPYm": PairConfig("CHFJPYm", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
-    "NZDJPYm": PairConfig("NZDJPYm", "30M", "5M", ["london","sydney","tokyo"],   4.0, 2.5, 6.0, 0.01),
+    "AUDJPY": PairConfig("AUDJPY", "30M", "5M", ["london","sydney","tokyo"],   4.0, 2.5, 6.0, 0.01),
+    "CADJPY": PairConfig("CADJPY", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
+    "CHFJPY": PairConfig("CHFJPY", "30M", "5M", ["london","new_york","tokyo"], 4.0, 2.5, 6.0, 0.01),
+    "NZDJPY": PairConfig("NZDJPY", "30M", "5M", ["london","sydney","tokyo"],   4.0, 2.5, 6.0, 0.01),
     # ── Exotics ───────────────────────────────────────────────────────────────
-    "USDZARm": PairConfig("USDZARm", "30M", "5M", ["london_open","new_york_open"], 5.0, 3.0, 8.0, 0.0001),
+    "USDZAR": PairConfig("USDZAR", "30M", "5M", ["london_open","new_york_open"], 5.0, 3.0, 8.0, 0.0001),
     # ── Commodities / Indices ─────────────────────────────────────────────────
-    "XAUUSDm":     PairConfig("XAUUSDm",     "4H", "15M", ["london_open","new_york_open"], 0.50, 0.30, 0.80, 1.0),
-    "USTEC_x100m": PairConfig("USTEC_x100m", "4H", "15M", ["new_york_open"],               10.0, 5.0, 20.0, 1.0),
+    "XAUUSD": PairConfig("XAUUSD", "4H", "15M", ["london_open","new_york_open"], 0.50, 0.30, 0.80, 1.0),
+    "NAS100": PairConfig("NAS100", "4H", "15M", ["new_york_open"],               10.0, 5.0, 20.0, 1.0),
 }

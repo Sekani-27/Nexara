@@ -25,7 +25,7 @@ def test_bos_requires_body_close():
     Core rule: candle BODY must close below neckline.
     A wick through is NOT a BOS.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = StructureEngine(config)
 
     neckline = 1.10000
@@ -52,7 +52,7 @@ def test_sweep_requires_body_rejection():
     """
     Sweep rule: wick pierces level AND body closes back.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = StructureEngine(config)
 
     level = 1.10000
@@ -75,7 +75,7 @@ def test_fvg_detection():
     """
     FVG: 3-candle imbalance. Gap between prev.low and next.high (bearish).
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = POIEngine(config)
 
     # Create 3 candles with a clear bearish FVG
@@ -97,9 +97,9 @@ def test_fvg_detection():
 
 def test_equal_highs_detection():
     """
-    USTEC_x100m / double top edge: equal highs within tolerance.
+    NAS100 / double top edge: equal highs within tolerance.
     """
-    config = PAIR_CONFIGS["USTEC_x100m"]
+    config = PAIR_CONFIGS["NAS100"]
     engine = StructureEngine(config)
 
     candles = [make_candle(18000, 18100 + i * 50, 17900, 18050, i=i) for i in range(20)]
@@ -111,7 +111,7 @@ def test_equal_highs_detection():
     swing2 = SwingPoint(candle=candles[15], swing_type=StructureType.EQH, level=19015.0, index=15)  # 15pt gap < 20pt tolerance
 
     eq_pairs = engine.find_equal_levels([swing1, swing2], level_type="high")
-    assert len(eq_pairs) > 0, "Should find equal high pair within USTEC_x100m tolerance"
+    assert len(eq_pairs) > 0, "Should find equal high pair within NAS100 tolerance"
     print(f"PASS — Equal highs detected within {config.peak_equality_pips}pt tolerance")
 
 
@@ -119,7 +119,7 @@ def test_bias_determination():
     """
     Bearish bias from LH/LL sequence, bullish from HH/HL.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = StructureEngine(config)
 
     from trader_copilot.core.structures import SwingPoint, StructureType
@@ -146,19 +146,19 @@ def test_bias_determination():
 
 def test_killzone_filter():
     """
-    XAUUSDm should only fire during NY open (13:00–14:30 UTC).
+    XAUUSD should only fire during NY open (13:00–14:30 UTC).
     """
     from trader_copilot.core.signal_generator import SignalGenerator
 
-    config = PAIR_CONFIGS["XAUUSDm"]
+    config = PAIR_CONFIGS["XAUUSD"]
     gen = SignalGenerator(config)
 
     inside_kz  = datetime(2024, 1, 2, 13, 30)  # 13:30 UTC — NY open
-    outside_kz = datetime(2024, 1, 2, 10, 0)   # 10:00 UTC — outside for XAUUSDm
+    outside_kz = datetime(2024, 1, 2, 10, 0)   # 10:00 UTC — outside for XAUUSD
 
     assert gen.is_killzone_active(inside_kz)  == True,  "13:30 UTC should be in NY open KZ"
-    assert gen.is_killzone_active(outside_kz) == False, "10:00 UTC should be outside XAUUSDm KZ"
-    print("PASS — Killzone filter working for XAUUSDm")
+    assert gen.is_killzone_active(outside_kz) == False, "10:00 UTC should be outside XAUUSD KZ"
+    print("PASS — Killzone filter working for XAUUSD")
 
 
 if __name__ == "__main__":

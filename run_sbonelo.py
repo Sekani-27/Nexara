@@ -101,7 +101,7 @@ def _run_check():
 def _format_and_send(decision):
     """Format the appropriate alert and send it via Sbonelo's Telegram."""
     signal_body = (
-        "🟢 GBPUSDm — SELL\n"
+        "🟢 GBPUSD — SELL\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "Pattern:    Bearish Breakout & Retest\n"
         "Session:    London\n"

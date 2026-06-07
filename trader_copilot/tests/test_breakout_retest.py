@@ -327,7 +327,7 @@ def test_full_pipeline_bearish():
       wedge detection uses candles[77:105] (3 tail channel + 25 consolidation)
       breakout search in candles[105:115] → finds breakout at index 109
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = BreakoutRetestEngine(config)
 
     CHANNEL_CANDLES = 80
@@ -435,7 +435,7 @@ def test_no_signal_without_breakout():
     """
     If price never breaks out of the wedge, engine should return None.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = BreakoutRetestEngine(config)
 
     # Bearish channel with wedge but NO breakout — wedge holds

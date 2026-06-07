@@ -66,28 +66,42 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 
 
 # ─────────────────────────────────────────────
+# MARKET-OPEN GATE
+# ─────────────────────────────────────────────
+
+def is_forex_market_open() -> bool:
+    now = datetime.now(timezone.utc)
+    # Forex closed Saturday and Sunday before 21:00 UTC
+    if now.weekday() == 5:  # Saturday
+        return False
+    if now.weekday() == 6 and now.hour < 21:  # Sunday before Sydney open
+        return False
+    return True
+
+
+# ─────────────────────────────────────────────
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 
 CURRENCY_PAIRS  = {
     # Original six
-    "EURUSDm", "GBPUSDm", "EURAUDm", "EURCADm", "CADJPYm", "GBPCADm",
+    "EURUSD", "GBPUSD", "EURAUD", "EURCAD", "CADJPY", "GBPCAD",
     # New additions
-    "GBPJPYm", "USDJPYm", "USDZARm", "USDCHFm",
-    "AUDUSDm", "NZDUSDm", "USDCADm", "EURJPYm",
+    "GBPJPY", "USDJPY", "USDZAR", "USDCHF",
+    "AUDUSD", "NZDUSD", "USDCAD", "EURJPY",
 }
-COMMODITY_PAIRS = {"XAUUSDm"}           # Gold — 4H/15M, price-unit pip precision
-INDEX_PAIRS     = {"USTEC_x100m"}       # Nasdaq-100 — 4H/15M, point-unit precision
+COMMODITY_PAIRS = {"XAUUSD"}    # Gold — 4H/15M, price-unit pip precision
+INDEX_PAIRS     = {"NAS100"}    # Nasdaq-100 — 4H/15M, point-unit precision
 
-# Explicit scan order — XAUUSDm first so it hits TwelveData before the
+# Explicit scan order — XAUUSD first so it hits TwelveData before the
 # rate-limit window fills.  6 pairs active.
 ALL_PAIRS = [
-    "XAUUSDm",      # Gold — scanned first, before rate-limit window fills
-    "EURUSDm",
-    "GBPUSDm",
-    "USDJPYm",
-    "GBPJPYm",
-    "CADJPYm",
+    "XAUUSD",   # Gold — scanned first, before rate-limit window fills
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "GBPJPY",
+    "CADJPY",
 ]
 
 
@@ -355,6 +369,15 @@ def run(
             now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
             logger.info(f"── Cycle {cycle} | {now} | Scanning {len(pairs)} pair(s) ──")
 
+            if not is_forex_market_open():
+                logger.info(
+                    f"── Cycle {cycle} | Market closed — skipping scan. "
+                    f"Next check in {interval_minutes} min ──\n"
+                )
+                tracker.tick()
+                time.sleep(interval_minutes * 60)
+                continue
+
             signals_fired = 0
             for symbol in pairs:
                 if scan_pair(
@@ -368,7 +391,7 @@ def run(
                     twelvedata=twelvedata,
                 ):
                     signals_fired += 1
-                time.sleep(10)  # rate-limit buffer between pair scans
+                time.sleep(2)   # rate-limit buffer between pair scans
 
             update_health(pairs=len(pairs), cycle=cycle)
             logger.info(

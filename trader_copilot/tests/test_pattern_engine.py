@@ -67,7 +67,7 @@ def test_flag_bearish_valid():
       candle that touched the floor, and _find_body_bos scans forward to find
       the BOS candle whose body (close) has closed through the level.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -108,7 +108,7 @@ def test_flag_bearish_no_signal_when_range_too_wide():
     If the consolidation range is wider than 4× the average candle range,
     it is NOT a flag — it's a normal trending move.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -137,7 +137,7 @@ def test_flag_insufficient_candles():
     detect_flag() requires at least 20 candles.
     With fewer candles it must return None immediately.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -163,7 +163,7 @@ def test_flag_bullish_valid():
       candle at the ceiling; the BOS candle's close (above the ceiling) triggers
       the body-BOS check.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -233,7 +233,7 @@ def _make_hs_candles_and_swings(config):
 
 def test_hs_valid():
     """Classic H&S: three peaks (LS < Head > RS), two neckline lows, BOS below neckline."""
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -256,7 +256,7 @@ def test_hs_no_signal_when_shoulders_unequal():
     If the right shoulder is much higher than the left (outside shoulder_tolerance),
     the pattern is NOT a valid H&S.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -276,7 +276,7 @@ def test_hs_insufficient_swings():
     H&S requires at least 3 swing highs and 2 swing lows.
     With fewer swings, must return None.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -296,7 +296,7 @@ def test_hs_no_signal_when_no_bos():
     """
     All geometry present but no candle closes below the neckline — no BOS, no signal.
     """
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -349,7 +349,7 @@ def _make_ihs_candles_and_swings(config):
 
 def test_inverse_hs_valid():
     """Inverse H&S: three troughs (LS > Head < RS), two neckline highs, BOS above neckline."""
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -368,7 +368,7 @@ def test_inverse_hs_valid():
 
 def test_inverse_hs_no_signal_when_shoulders_unequal():
     """RS trough at a much lower level than LS — outside shoulder tolerance."""
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -385,7 +385,7 @@ def test_inverse_hs_no_signal_when_shoulders_unequal():
 
 def test_inverse_hs_insufficient_swings():
     """Inverse H&S requires at least 3 swing lows and 2 swing highs."""
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
@@ -403,7 +403,7 @@ def test_inverse_hs_insufficient_swings():
 
 def test_inverse_hs_no_signal_when_no_bos():
     """Wick-only break above neckline does not trigger inverse H&S (body BOS rule)."""
-    config = PAIR_CONFIGS["EURUSDm"]
+    config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
     poi    = POIEngine(config)
 
