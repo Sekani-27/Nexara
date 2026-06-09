@@ -858,6 +858,10 @@ def start_polling_thread() -> threading.Thread:
     Returns the Thread so the caller can join() it if needed.
     The thread is a daemon — it exits automatically when the main process ends.
     """
+    if os.getenv("ENABLE_TELEGRAM_POLLING", "").lower() != "true":
+        log.info("Telegram polling disabled — set ENABLE_TELEGRAM_POLLING=true to enable.")
+        return None
+
     if not _TOKEN:
         log.warning("start_polling_thread: TELEGRAM_BOT_TOKEN not set — polling disabled.")
         return threading.Thread(target=lambda: None, daemon=True)  # no-op thread
