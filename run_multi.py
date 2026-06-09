@@ -355,6 +355,11 @@ def run(
     logger.info(f"  Dry-run   : {'YES — alerts logged only' if dry_run else 'no'}")
     logger.info(f"{'═' * 60}\n")
 
+    # Start Telegram polling in a background daemon thread so inbound messages
+    # (keyword queries and Groq fallback) are handled while the scan loop runs.
+    from trader_copilot.telegram_bot import start_polling_thread
+    start_polling_thread()
+
     # Cold-start pause — give TwelveData rate-limit buckets time to settle
     # before Cycle 1 fires.  Without this, a fresh container restart hammers
     # both keys simultaneously from a standing start and hits the 429 window.
