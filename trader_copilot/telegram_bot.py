@@ -21,7 +21,7 @@ Keyword routing
   risk / guard        → Risk Guard status for both accounts
   performance / week  → journal performance summary
   <pair name>         → pair-specific status (EURUSD, GOLD, GBPJPY, etc.)
-  <anything else>     → Groq llama-3.1-70b-versatile with trading context
+  <anything else>     → Groq llama-3.3-70b-versatile with trading context
 
 Environment (.env)
 ------------------
@@ -668,14 +668,14 @@ Respond directly without preamble."""
 
 def _groq_chat(user_text: str, context: str) -> str:
     """
-    Send user_text to Groq (llama-3.1-70b-versatile) via the official SDK.
+    Send user_text to Groq (llama-3.3-70b-versatile) via the official SDK.
     context is injected as the system prompt.
     Returns the reply text, or a user-facing error string on failure.
     """
     try:
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         completion = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": context},
                 {"role": "user",   "content": user_text},
@@ -715,7 +715,7 @@ async def handle_message(text: str) -> str:
       5. Keyword: risk / guard / fence                 → Risk Guard status
       6. Keyword: performance / stats / week / journal → performance summary
       7. Keyword: help                                 → command list
-      8. Fallback: Groq llama-3.1-70b-versatile        → AI response
+      8. Fallback: Groq llama-3.3-70b-versatile        → AI response
     """
     normalised = text.strip().lower()
     tokens     = [t.upper() for t in text.strip().split()]
