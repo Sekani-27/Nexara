@@ -84,7 +84,7 @@ class RiskGuard:
         resolved_firm    = firm_name    or env.get("ACTIVE_FIRM", "goat")
         resolved_account = float(
             account_size if account_size is not None
-            else env.get("ACCOUNT_SIZE", 10_000)
+            else env.get("ACCOUNT_SIZE") or os.getenv("ACCOUNT_SIZE", "10000")
         )
         resolved_db = (
             db_path
