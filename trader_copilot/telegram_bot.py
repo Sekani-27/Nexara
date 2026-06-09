@@ -36,12 +36,10 @@ If GROQ_API_KEY is missing the fallback returns a clear error message.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import threading
-import urllib.error
-import urllib.request
+from groq import Groq
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -668,68 +666,26 @@ Your role:
 Respond directly without preamble."""
 
 
-def _groq_chat(user_message: str) -> str:
+def _groq_chat(user_text: str, context: str) -> str:
     """
-    Send user_message to Groq (llama-3.1-70b-versatile) with trading context.
-    Returns the reply text, or a clear error string on failure.
-    Uses stdlib urllib — no extra dependency.
+    Send user_text to Groq (llama-3.1-70b-versatile) via the official SDK.
+    context is injected as the system prompt.
+    Returns the reply text, or a user-facing error string on failure.
     """
-    api_key = _GROQ_API_KEY or os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return (
-            "⚠️ GROQ_API_KEY is not configured.\n"
-            "Add it to Railway env vars or your .env file to enable AI responses."
-        )
-
-    url     = "https://api.groq.com/openai/v1/chat/completions"
-    payload = json.dumps({
-        "model":       "llama-3.1-70b-versatile",
-        "messages": [
-            {"role": "system",  "content": _groq_system_prompt()},
-            {"role": "user",    "content": user_message},
-        ],
-        "temperature": 0.65,
-        "max_tokens":  500,
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={
-            "Content-Type":  "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
-
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-            return body["choices"][0]["message"]["content"].strip()
-
-    except urllib.error.HTTPError as exc:
-        try:
-            err_body = exc.read().decode("utf-8", errors="replace")
-        except Exception:
-            err_body = "<unreadable>"
-        log.error("Groq API HTTP %d: %s", exc.code, err_body[:300])
-        if exc.code == 401:
-            return "⚠️ Groq API key rejected (HTTP 401). Check GROQ_API_KEY."
-        if exc.code == 429:
-            return "⚠️ Groq rate limit hit. Try again in a moment."
-        return f"⚠️ Groq API error (HTTP {exc.code}) — check logs."
-
-    except urllib.error.URLError as exc:
-        log.error("Groq network error: %s", exc.reason)
-        return "⚠️ Could not reach Groq API — check network connectivity."
-
-    except (KeyError, json.JSONDecodeError) as exc:
-        log.error("Groq response parse error: %s", exc)
-        return "⚠️ Unexpected response from Groq — check logs."
-
-    except Exception as exc:
-        log.error("Groq unexpected error: %s", exc, exc_info=True)
-        return "⚠️ AI response unavailable — check logs."
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        completion = client.chat.completions.create(
+            model="llama-3.1-70b-versatile",
+            messages=[
+                {"role": "system", "content": context},
+                {"role": "user",   "content": user_text},
+            ],
+            max_tokens=500,
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        log.error("Groq SDK error: %s", e)
+        return f"⚠️ Groq error — {e}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -790,7 +746,7 @@ async def handle_message(text: str) -> str:
 
     # ── 8. Groq fallback ─────────────────────────────────────────────────────
     log.info("handle_message: no keyword match — routing to Groq for: %r", text[:80])
-    return _groq_chat(text)
+    return _groq_chat(text, _groq_system_prompt())
 
 
 def _build_help() -> str:
