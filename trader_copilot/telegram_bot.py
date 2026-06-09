@@ -863,17 +863,28 @@ def start_polling_thread() -> threading.Thread:
         return threading.Thread(target=lambda: None, daemon=True)  # no-op thread
 
     def _run():
-        # Each thread needs its own event loop (Python ≥ 3.10 no longer sets one
-        # automatically on non-main threads).
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
+        # app.run_polling() registers OS signal handlers which only work on the
+        # main thread — calling it from a daemon thread raises:
+        #   RuntimeError: set_wakeup_fd only works in main thread of the main interpreter
+        # Instead we drive the Application lifecycle manually so no signal
+        # handlers are ever registered.
         app = Application.builder().token(_TOKEN).build()   # type: ignore[arg-type]
         app.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, _on_message)
         )
-        log.info("Telegram polling started — listening for inbound messages.")
-        app.run_polling(drop_pending_updates=True)
+
+        async def _poll():
+            await app.initialize()
+            await app.start()
+            await app.updater.start_polling(drop_pending_updates=True)
+            log.info("Telegram polling started — listening for inbound messages.")
+            # Sleep indefinitely; the daemon thread is killed when the process exits.
+            while True:
+                await asyncio.sleep(3600)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(_poll())
 
     t = threading.Thread(target=_run, name="telegram-polling", daemon=True)
     t.start()
