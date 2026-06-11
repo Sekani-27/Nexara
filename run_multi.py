@@ -282,8 +282,26 @@ def scan_pair(
             pip = 0.0001
         pip_threshold = 15 * pip
 
-        current_price = twelvedata.get_current_price(symbol) if twelvedata else None
-        if current_price is not None:
+        # Try Massive first (cheaper, no shared rate-limit bucket with candle
+        # fetches), fall back to TwelveData, log clearly if both return None.
+        current_price = None
+        if massive is not None and massive.is_available():
+            current_price = massive.get_current_price(symbol)
+            if current_price is not None:
+                logger.debug(f"{symbol:10s} — price-gate: current price from Massive: {current_price:.5f}")
+        if current_price is None and twelvedata is not None and twelvedata.is_available():
+            current_price = twelvedata.get_current_price(symbol)
+            if current_price is not None:
+                logger.debug(f"{symbol:10s} — price-gate: current price from TwelveData: {current_price:.5f}")
+
+        if current_price is None:
+            logger.warning(
+                f"{symbol:10s} — price-gate: could not fetch current price from any source "
+                f"(Massive={'available' if massive and massive.is_available() else 'unavailable'}, "
+                f"TwelveData={'available' if twelvedata and twelvedata.is_available() else 'unavailable'}) "
+                f"— staleness check SKIPPED, alert will fire"
+            )
+        else:
             direction_up = signal.direction.value.lower() == "buy"
             # For a BUY, price above entry means the level was already triggered.
             # For a SELL, price below entry means the level was already triggered.
@@ -291,12 +309,18 @@ def scan_pair(
                 (current_price - signal.entry_price) if direction_up
                 else (signal.entry_price - current_price)
             )
-            if overshoot > pip_threshold:
+            overshoot_pips = overshoot / pip
+            logger.info(
+                f"{symbol:10s} — price-gate: entry={signal.entry_price:.5f} "
+                f"current={current_price:.5f} direction={signal.direction.value.upper()} "
+                f"overshoot={overshoot_pips:.1f} pips (threshold=15) "
+                f"STALE={'True' if overshoot_pips > 15 else 'False'}"
+            )
+            if overshoot_pips > 15:
                 logger.warning(
                     f"{symbol:10s} — STALE alert suppressed | "
                     f"entry={signal.entry_price:.5f} current={current_price:.5f} "
-                    f"overshoot={overshoot/pip:.1f} pips (limit=15) | "
-                    f"STALE=True"
+                    f"overshoot={overshoot_pips:.1f} pips | STALE=True"
                 )
                 tracker.register(symbol, signal.pattern,
                                   signal.direction.value, signal.timestamp)
