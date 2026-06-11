@@ -37,9 +37,13 @@ if _ROOT not in sys.path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse
+import json
 import logging
+import sqlite3
 import sys
+import threading
 import time
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
@@ -341,6 +345,169 @@ def scan_pair(
 
 
 # ─────────────────────────────────────────────
+# SESSION DEBRIEF — fires daily at 17:00 UTC
+# ─────────────────────────────────────────────
+
+_DEBRIEF_HOUR = 17  # UTC hour to fire
+
+_DEBRIEF_DB_PATH = os.environ.get(
+    "JOURNAL_DB_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "trader_copilot_journal.db"),
+)
+
+_TELEGRAM_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN")
+_TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+
+def _query_signals_today(today_str: str) -> dict:
+    """
+    Query trader_copilot_journal.db for today's signal counts.
+    Returns dict with fired/taken/ignored; falls back to zeros on any error.
+    """
+    result = {"fired": 0, "taken": 0, "ignored": 0}
+    try:
+        conn = sqlite3.connect(_DEBRIEF_DB_PATH)
+        try:
+            row = conn.execute(
+                """
+                SELECT
+                    COUNT(*)                          AS fired,
+                    SUM(CASE WHEN taken = 1 THEN 1 ELSE 0 END) AS taken
+                FROM trades
+                WHERE DATE(created_at) = ?
+                """,
+                (today_str,),
+            ).fetchone()
+            if row:
+                fired = row[0] or 0
+                taken = row[1] or 0
+                result = {"fired": fired, "taken": taken, "ignored": fired - taken}
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.warning("Debrief: could not query signals from DB — %s", exc)
+    return result
+
+
+def _get_risk_guard_state() -> dict:
+    """
+    Read live risk guard state from health_server._state.
+    Returns safe defaults if health_server isn't imported yet.
+    """
+    try:
+        import health_server  # imported after start_health_server() runs
+        rg = health_server._state.get("risk_guard", {})
+        return {
+            "open_positions":     rg.get("open_positions",     []),
+            "open_trade_count":   rg.get("open_trade_count",   0),
+            "total_exposure":     rg.get("total_exposure",     0.0),
+            "realized_pnl_today": rg.get("realized_pnl_today", 0.0),
+        }
+    except Exception as exc:
+        logger.warning("Debrief: could not read risk_guard state — %s", exc)
+        return {
+            "open_positions": [], "open_trade_count": 0,
+            "total_exposure": 0.0, "realized_pnl_today": 0.0,
+        }
+
+
+def _build_debrief_message(today_str: str) -> str:
+    signals = _query_signals_today(today_str)
+    rg      = _get_risk_guard_state()
+
+    pnl        = rg["realized_pnl_today"]
+    pnl_str    = f"+${pnl:,.2f}" if pnl >= 0 else f"-${abs(pnl):,.2f}"
+    open_count = rg["open_trade_count"]
+    exposure   = rg["total_exposure"]
+
+    # Risk guard status line
+    if open_count == 0:
+        rg_status = "CLEAR"
+    else:
+        syms = ", ".join(p["symbol"] for p in rg["open_positions"])
+        rg_status = f"OPEN — {syms}"
+
+    return (
+        "╔══════════════════════════════════════╗\n"
+        "  GENUVIA EDGE — SESSION DEBRIEF 📊\n"
+        "╚══════════════════════════════════════╝\n"
+        "\n"
+        f"  Date        : {today_str}\n"
+        f"  Session     : London/NY Close (17:00 UTC)\n"
+        "\n"
+        "  SIGNALS\n"
+        f"  Fired Today : {signals['fired']}\n"
+        f"  Taken       : {signals['taken']}\n"
+        f"  Ignored     : {signals['ignored']}\n"
+        "\n"
+        "  POSITIONS\n"
+        f"  Open Trades : {open_count}\n"
+        f"  Exposure    : {exposure:.2f} lots\n"
+        "\n"
+        "  P&L\n"
+        f"  Realized    : {pnl_str}\n"
+        "\n"
+        "  RISK GUARD\n"
+        f"  Status      : {rg_status}\n"
+        "══════════════════════════════════════════"
+    )
+
+
+def _send_debrief_telegram(text: str) -> None:
+    """POST debrief message directly to the Telegram Bot API via urllib."""
+    if not _TELEGRAM_TOKEN or not _TELEGRAM_CHAT_ID:
+        logger.warning("Debrief: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set — skipping send.")
+        return
+    url     = f"https://api.telegram.org/bot{_TELEGRAM_TOKEN}/sendMessage"
+    payload = json.dumps({"chat_id": _TELEGRAM_CHAT_ID, "text": text}).encode()
+    req     = urllib.request.Request(
+        url, data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            logger.info("Debrief sent — HTTP %s", resp.status)
+    except Exception as exc:
+        logger.error("Debrief: Telegram send failed — %s", exc)
+
+
+def _debrief_loop() -> None:
+    """
+    Daemon loop: wakes every 60 s, fires debrief once at _DEBRIEF_HOUR UTC.
+    A date tracker prevents double-firing if the process restarts mid-minute.
+    """
+    last_fired: Optional[str] = None
+    logger.info("Debrief thread started — will fire daily at %02d:00 UTC.", _DEBRIEF_HOUR)
+
+    while True:
+        time.sleep(60)
+        now       = datetime.now(timezone.utc)
+        today_str = now.strftime("%Y-%m-%d")
+
+        if now.hour != _DEBRIEF_HOUR or now.minute != 0:
+            continue
+        if last_fired == today_str:
+            continue
+
+        last_fired = today_str
+        logger.info("Debrief: building session debrief for %s…", today_str)
+        try:
+            message = _build_debrief_message(today_str)
+            logger.info("Debrief message:\n%s", message)
+            _send_debrief_telegram(message)
+        except Exception as exc:
+            logger.error("Debrief: unexpected error — %s", exc, exc_info=True)
+
+
+def start_debrief_thread() -> threading.Thread:
+    """Launch the daily debrief loop as a daemon thread."""
+    t = threading.Thread(target=_debrief_loop, name="session-debrief", daemon=True)
+    t.start()
+    return t
+
+
+# ─────────────────────────────────────────────
 # MAIN RUNNER
 # ─────────────────────────────────────────────
 
@@ -416,6 +583,9 @@ def run(
     # (keyword queries and Groq fallback) are handled while the scan loop runs.
     from trader_copilot.telegram_bot import start_polling_thread
     start_polling_thread()
+
+    # Daily session debrief at 17:00 UTC.
+    start_debrief_thread()
 
     # Cold-start pause — give TwelveData rate-limit buckets time to settle
     # before Cycle 1 fires.  Without this, a fresh container restart hammers
