@@ -47,7 +47,7 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 from telegram import Bot, Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 # ── env ──────────────────────────────────────────────────────────────────────
 # Always resolve .env relative to this file so the feed can be launched
@@ -769,6 +769,80 @@ def _build_help() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# /size COMMAND — position size calculator
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _calc_position_size(balance: float, risk_pct: float, entry: float,
+                        sl: float, symbol: str) -> str:
+    """
+    Pure calculation — returns a formatted reply string or raises ValueError.
+    Kept separate from the handler so it can be unit-tested independently.
+    """
+    sym = symbol.upper()
+
+    # Pip size per symbol type
+    if sym.endswith("JPY"):
+        pip_size = 0.01
+        pip_value_per_lot = 1.0
+    elif sym in ("XAUUSD", "GOLD"):
+        pip_size = 0.10
+        pip_value_per_lot = 1.0
+    else:
+        pip_size = 0.0001
+        pip_value_per_lot = 10.0
+
+    risk_amount = balance * (risk_pct / 100)
+    sl_pips = abs(entry - sl) / pip_size
+
+    if sl_pips == 0:
+        raise ValueError("Entry and SL prices are identical — SL distance is zero.")
+
+    raw_lot = risk_amount / (sl_pips * pip_value_per_lot)
+    lot_size = max(round(raw_lot, 2), 0.01)
+    max_loss = round(lot_size * sl_pips * pip_value_per_lot, 2)
+
+    return (
+        f"Account: ${balance:,.0f} | Risk: {risk_pct}% = ${risk_amount:,.2f}\n"
+        f"SL Distance: {sl_pips:.1f} pips\n"
+        f"Recommended Lot Size: {lot_size:.2f}\n"
+        f"Max Loss: ${max_loss:,.2f}"
+    )
+
+
+async def _cmd_size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler for /size <balance> <risk_pct> <entry> <sl> <symbol>."""
+    usage = "Usage: /size <balance> <risk_%> <entry> <sl> <symbol>\nExample: /size 8000 1 1.33672 1.33731 GBPUSD"
+
+    args = context.args or []
+    if len(args) != 5:
+        await update.message.reply_text(f"Wrong number of arguments.\n{usage}")
+        return
+
+    try:
+        balance  = float(args[0])
+        risk_pct = float(args[1])
+        entry    = float(args[2])
+        sl       = float(args[3])
+        symbol   = args[4]
+    except ValueError:
+        await update.message.reply_text(f"Non-numeric value in arguments.\n{usage}")
+        return
+
+    if balance <= 0 or risk_pct <= 0:
+        await update.message.reply_text("Balance and risk % must be positive numbers.")
+        return
+
+    try:
+        reply = _calc_position_size(balance, risk_pct, entry, sl, symbol)
+    except ValueError as exc:
+        await update.message.reply_text(f"Calculation error: {exc}")
+        return
+
+    log.info("Position size calculated for %s: entry=%.5f sl=%.5f", symbol, entry, sl)
+    await update.message.reply_text(reply)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TELEGRAM APPLICATION — incoming message handler + polling setup
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -829,6 +903,7 @@ def start_polling_thread() -> threading.Thread:
         # Instead we drive the Application lifecycle manually so no signal
         # handlers are ever registered.
         app = Application.builder().token(_TOKEN).build()   # type: ignore[arg-type]
+        app.add_handler(CommandHandler("size", _cmd_size))
         app.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, _on_message)
         )
