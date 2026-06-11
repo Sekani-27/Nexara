@@ -21,7 +21,25 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import List, Optional
 import uvicorn
+
+# ── Trade event model ─────────────────────────────────────────────────────────
+
+class TradeEvent(BaseModel):
+    ticket: int
+    symbol: str
+    direction: str          # "BUY" or "SELL"
+    lot_size: float
+    entry_price: float
+    sl: float
+    tp: float
+    event: str              # "OPEN" or "CLOSE"
+    close_price: Optional[float] = None
+    profit: Optional[float] = None
+    timestamp: str          # ISO format
+
 
 # ── Shared state (written by run_multi, read by /health) ─────────────────────
 _health: dict = {
@@ -42,6 +60,26 @@ def update_health(pairs: int, cycle: int):
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(title="Genuvia Edge Health")
+
+
+_trade_events: List[dict] = []
+
+
+@app.post("/webhook/trade")
+def receive_trade_event(payload: TradeEvent) -> dict:
+    """Ingest a trade event pushed from MT5."""
+    _trade_events.append(payload.model_dump())
+    print(
+        f"[TRADE EVENT] ticket={payload.ticket} symbol={payload.symbol} "
+        f"direction={payload.direction} event={payload.event}"
+    )
+    return {"status": "received", "ticket": payload.ticket}
+
+
+@app.get("/webhook/trades")
+def get_trade_events() -> list:
+    """Return all stored trade events."""
+    return _trade_events
 
 
 @app.get("/health")

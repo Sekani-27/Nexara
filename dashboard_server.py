@@ -28,6 +28,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import Optional
 
 load_dotenv()
 
@@ -234,6 +236,42 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
+# ── Webhook models ────────────────────────────────────────────────────────────
+
+class TradeEvent(BaseModel):
+    ticket: int
+    symbol: str
+    direction: str          # "BUY" or "SELL"
+    lot_size: float
+    entry_price: float
+    sl: float
+    tp: float
+    event: str              # "OPEN" or "CLOSE"
+    close_price: Optional[float] = None
+    profit: Optional[float] = None
+    timestamp: str          # ISO format
+
+
+# ── Webhook endpoints ─────────────────────────────────────────────────────────
+
+@app.post("/webhook/trade")
+def receive_trade_event(payload: TradeEvent) -> dict:
+    """Ingest a trade event pushed from MT5."""
+    _state.setdefault("trade_events", [])
+    _state["trade_events"].append(payload.model_dump())
+    print(
+        f"[TRADE EVENT] ticket={payload.ticket} symbol={payload.symbol} "
+        f"direction={payload.direction} event={payload.event}"
+    )
+    return {"status": "received", "ticket": payload.ticket}
+
+
+@app.get("/webhook/trades")
+def get_trade_events() -> list:
+    """Return all stored trade events."""
+    return _state.get("trade_events", [])
 
 
 @app.get("/state")
