@@ -17,9 +17,16 @@ update_health() function exported from this module.
 
 import os
 import sqlite3
+import sys
 import threading
 from datetime import datetime, timezone
 from typing import List, Optional
+
+# ── Path bootstrap — makes `trader_copilot` importable when health_server is
+# started standalone (Railway) or imported before run_multi adds the root.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -138,6 +145,81 @@ app = FastAPI(title="Genuvia Edge Health")
 _trade_events: List[dict] = []
 
 
+def _link_to_signal_journal(payload: "TradeEvent") -> None:
+    """
+    On CLOSE: find the most recent matching pending signal in the trades table
+    and call record_outcome() so taken is set to 1 and the outcome is recorded.
+    Runs after the mt5_trades write — any error here is logged but never raises.
+    """
+    try:
+        from trader_copilot.journal.trade_journal import TradeJournal, Outcome
+    except ImportError as exc:
+        print(f"[JOURNAL LINK] Could not import TradeJournal — {exc}")
+        return
+
+    # Infer Outcome from profit (we don't know if TP or SL was hit from the webhook)
+    profit = payload.profit or 0.0
+    if profit > 0:
+        outcome = Outcome.MANUAL_WIN
+    elif profit < 0:
+        outcome = Outcome.MANUAL_LOSS
+    else:
+        outcome = Outcome.BREAKEVEN
+
+    # Parse close_time from ISO string (strip trailing Z for fromisoformat compat)
+    try:
+        close_time = datetime.fromisoformat(payload.timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        close_time = datetime.now(timezone.utc)
+
+    # Find the most recent pending signal for this symbol that hasn't been taken
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            row = conn.execute(
+                """
+                SELECT id FROM trades
+                WHERE symbol = ?
+                  AND taken   = 0
+                  AND outcome = 'pending'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (payload.symbol,),
+            ).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"[JOURNAL LINK] DB lookup failed for ticket={payload.ticket} — {exc}")
+        return
+
+    if row is None:
+        print(
+            f"[JOURNAL LINK] No matching pending signal found for "
+            f"symbol={payload.symbol} ticket={payload.ticket} — skipping record_outcome()"
+        )
+        return
+
+    trade_id = row["id"]
+    try:
+        journal = TradeJournal(db_path=_DB_PATH)
+        journal.record_outcome(
+            trade_id=trade_id,
+            outcome=outcome,
+            close_price=payload.close_price or 0.0,
+            close_time=close_time,
+            taken=True,
+        )
+        print(
+            f"[JOURNAL LINK] record_outcome() called — "
+            f"trades.id={trade_id} symbol={payload.symbol} "
+            f"outcome={outcome.value} ticket={payload.ticket}"
+        )
+    except Exception as exc:
+        print(f"[JOURNAL LINK] record_outcome() failed for trade_id={trade_id} — {exc}")
+
+
 @app.post("/webhook/trade")
 def receive_trade_event(payload: TradeEvent) -> dict:
     """Ingest a trade event pushed from MT5 and persist it to the journal DB."""
@@ -220,6 +302,10 @@ def receive_trade_event(payload: TradeEvent) -> dict:
 
         finally:
             conn.close()
+
+    # ── Signal journal linkage (CLOSE only) ───────────────────────────────────
+    if payload.event.upper() == "CLOSE":
+        _link_to_signal_journal(payload)
 
     # ── Risk Guard state update ───────────────────────────────────────────────
     with _STATE_LOCK:
