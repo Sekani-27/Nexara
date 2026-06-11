@@ -269,6 +269,39 @@ def scan_pair(
             f"Candle: {signal.timestamp}"
         )
 
+        # ── Price-distance staleness gate ─────────────────────────────────
+        # If the current market price has already moved more than 15 pips
+        # past the entry level in the trade direction, the entry opportunity
+        # is gone — log STALE and skip the Telegram alert.
+        # Pip size: JPY pairs = 0.01, Gold (XAUUSD) = 0.10, others = 0.0001.
+        if symbol in COMMODITY_PAIRS:
+            pip = 0.10
+        elif symbol.endswith("JPY"):
+            pip = 0.01
+        else:
+            pip = 0.0001
+        pip_threshold = 15 * pip
+
+        current_price = twelvedata.get_current_price(symbol) if twelvedata else None
+        if current_price is not None:
+            direction_up = signal.direction.value.lower() == "buy"
+            # For a BUY, price above entry means the level was already triggered.
+            # For a SELL, price below entry means the level was already triggered.
+            overshoot = (
+                (current_price - signal.entry_price) if direction_up
+                else (signal.entry_price - current_price)
+            )
+            if overshoot > pip_threshold:
+                logger.warning(
+                    f"{symbol:10s} — STALE alert suppressed | "
+                    f"entry={signal.entry_price:.5f} current={current_price:.5f} "
+                    f"overshoot={overshoot/pip:.1f} pips (limit=15) | "
+                    f"STALE=True"
+                )
+                tracker.register(symbol, signal.pattern,
+                                  signal.direction.value, signal.timestamp)
+                return False
+
         if not dry_run:
             engine.alert(signal)
         else:
@@ -436,10 +469,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--interval",
-        default=30,
+        default=5,
         type=int,
         metavar="MINUTES",
-        help="Poll interval in minutes (default: 30)"
+        help="Poll interval in minutes (default: 5)"
     )
     parser.add_argument(
         "--webhook",
