@@ -61,6 +61,13 @@ SYMBOL_MAP: dict = {
     "CHFJPYm":     "C:CHFJPY",
     "NZDJPYm":     "C:NZDJPY",
     "AUDCADm":     "C:AUDCAD",
+    # ── Bare-symbol aliases (used by run_multi ALL_PAIRS) ─────────────────────
+    "XAUUSD":      "C:XAUUSD",
+    "EURUSD":      "C:EURUSD",
+    "GBPUSD":      "C:GBPUSD",
+    "USDJPY":      "C:USDJPY",
+    "GBPJPY":      "C:GBPJPY",
+    "CADJPY":      "C:CADJPY",
 }
 
 # ── Internal timeframe → (multiplier, timespan) ───────────────────────────────

@@ -80,6 +80,13 @@ SYMBOL_MAP: dict = {
     "NZDJPYm":     "NZD/JPY",
     "AUDCADm":     "AUD/CAD",
     "USDZARm":     "USD/ZAR",
+    # ── Bare-symbol aliases (used by run_multi ALL_PAIRS) ─────────────────────
+    "XAUUSD":      "XAU/USD",
+    "EURUSD":      "EUR/USD",
+    "GBPUSD":      "GBP/USD",
+    "USDJPY":      "USD/JPY",
+    "GBPJPY":      "GBP/JPY",
+    "CADJPY":      "CAD/JPY",
 }
 
 # ── Internal timeframe → TwelveData interval string ──────────────────────────
