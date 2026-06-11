@@ -90,6 +90,38 @@ _health: dict = {
     "last_scan": None,
 }
 
+# ── Risk Guard state (updated by webhook trade events) ────────────────────────
+_state: dict = {
+    "risk_guard": {
+        "open_positions":    [],   # list of dicts, one per open trade
+        "open_trade_count":  0,
+        "total_exposure":    0.0,  # sum of lot_size across open positions
+        "realized_pnl_today": 0.0,
+        "last_updated":      None,
+    }
+}
+
+_STATE_LOCK = threading.Lock()
+
+
+def _ensure_risk_guard() -> None:
+    """Guarantee _state["risk_guard"] has all expected keys (safe to call anytime)."""
+    rg = _state.setdefault("risk_guard", {})
+    rg.setdefault("open_positions",     [])
+    rg.setdefault("open_trade_count",   0)
+    rg.setdefault("total_exposure",     0.0)
+    rg.setdefault("realized_pnl_today", 0.0)
+    rg.setdefault("last_updated",       None)
+
+
+def _recalculate_exposure() -> None:
+    """Recompute open_trade_count and total_exposure from open_positions."""
+    rg = _state["risk_guard"]
+    rg["open_trade_count"] = len(rg["open_positions"])
+    rg["total_exposure"]   = round(
+        sum(p["lot_size"] for p in rg["open_positions"]), 2
+    )
+
 
 def update_health(pairs: int, cycle: int):
     """Call this from run_multi.py after each scan cycle completes."""
@@ -188,6 +220,33 @@ def receive_trade_event(payload: TradeEvent) -> dict:
 
         finally:
             conn.close()
+
+    # ── Risk Guard state update ───────────────────────────────────────────────
+    with _STATE_LOCK:
+        _ensure_risk_guard()
+        rg = _state["risk_guard"]
+
+        if payload.event.upper() == "OPEN":
+            rg["open_positions"].append({
+                "ticket":      payload.ticket,
+                "symbol":      payload.symbol,
+                "direction":   payload.direction,
+                "lot_size":    payload.lot_size,
+                "entry_price": payload.entry_price,
+                "sl":          payload.sl,
+                "tp":          payload.tp,
+                "opened_at":   payload.timestamp,
+            })
+        else:  # CLOSE
+            rg["open_positions"] = [
+                p for p in rg["open_positions"] if p["ticket"] != payload.ticket
+            ]
+            rg["realized_pnl_today"] = round(
+                rg["realized_pnl_today"] + (payload.profit or 0.0), 2
+            )
+
+        _recalculate_exposure()
+        rg["last_updated"] = now
 
     return {"status": "received", "ticket": payload.ticket, "journal_id": journal_id}
 
