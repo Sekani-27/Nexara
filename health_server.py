@@ -19,7 +19,7 @@ import os
 import sqlite3
 import sys
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone
 from typing import List, Optional
 
 # ── Path bootstrap — makes `trader_copilot` importable when health_server is
@@ -28,7 +28,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
@@ -55,6 +55,11 @@ class TradeEvent(BaseModel):
 _DB_PATH = os.environ.get(
     "JOURNAL_DB_PATH",
     os.path.join(os.path.dirname(__file__), "trader_copilot_journal.db"),
+)
+
+_RG_DB_PATH = os.environ.get(
+    "RISK_GUARD_DB_PATH",
+    os.path.join(os.path.dirname(__file__), "risk_guard.db"),
 )
 
 _DB_LOCK = threading.Lock()   # sqlite3 is not thread-safe across connections
@@ -346,6 +351,174 @@ def get_trade_events() -> list:
 @app.get("/health")
 def health() -> JSONResponse:
     return JSONResponse(_health)
+
+
+# ── GET /risk-guard/state ─────────────────────────────────────────────────────
+
+@app.get("/risk-guard/state")
+def risk_guard_state() -> JSONResponse:
+    """
+    Return the current account state from risk_guard.db.
+    Derives gate status (ALLOW/WARN/BLOCK) and any active prop-firm violations
+    from today's session_state row (most recent firm if multiple exist).
+    """
+    try:
+        conn = sqlite3.connect(_RG_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            today_str = date.today().isoformat()
+            row = conn.execute(
+                "SELECT * FROM session_state ORDER BY last_updated DESC LIMIT 1"
+            ).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return JSONResponse({"error": f"DB read failed: {exc}"}, status_code=500)
+
+    if row is None:
+        return JSONResponse({"error": "No session state found"}, status_code=404)
+
+    row = dict(row)
+    account_size      = row["account_size"]
+    starting_balance  = row["starting_balance"]
+    daily_pnl         = row["daily_pnl"]
+    balance           = round(starting_balance + daily_pnl, 2)
+    daily_loss_pct    = round(daily_pnl / account_size * 100.0, 4) if account_size else 0.0
+
+    # Gate status
+    violations: list[str] = []
+    if row["session_locked"]:
+        gate_status = "BLOCK"
+        violations.append("session_locked: hard stop triggered this session")
+    else:
+        revenge_until = row.get("revenge_locked_until")
+        if revenge_until:
+            try:
+                unlock_dt = datetime.fromisoformat(revenge_until)
+                if datetime.utcnow() < unlock_dt:
+                    gate_status = "BLOCK"
+                    violations.append(f"revenge_lock_active: trading resumes after {revenge_until}")
+                else:
+                    gate_status = "ALLOW"
+            except (ValueError, TypeError):
+                gate_status = "ALLOW"
+        else:
+            gate_status = "ALLOW"
+
+    if row.get("session_ended_via_hard_stop"):
+        violations.append("prior_hard_stop: previous session ended via hard stop")
+
+    return JSONResponse({
+        "firm":               row["firm"],
+        "session_date":       row["session_date"],
+        "account_size":       account_size,
+        "balance":            balance,
+        "daily_pnl":          round(daily_pnl, 2),
+        "daily_loss_pct":     daily_loss_pct,
+        "equity_high":        row["equity_high"],
+        "trades_today":       row["trades_today"],
+        "cumulative_pnl":     round(row["cumulative_pnl"], 2),
+        "valid_trading_days": row["valid_trading_days"],
+        "gate_status":        gate_status,
+        "prop_firm_violations": violations,
+        "last_updated":       row["last_updated"],
+    })
+
+
+# ── GET /signals ──────────────────────────────────────────────────────────────
+
+@app.get("/signals")
+def get_signals(
+    symbol: Optional[str] = Query(default=None, description="Filter by symbol, e.g. EURUSD"),
+    date: Optional[str]   = Query(default=None, description="Filter by signal date YYYY-MM-DD"),
+    limit: int            = Query(default=20, ge=1, le=500, description="Max rows to return"),
+) -> JSONResponse:
+    """Return recent signals from trader_copilot_journal.db with optional filters."""
+    conditions = []
+    params: list = []
+
+    if symbol:
+        conditions.append("symbol = ?")
+        params.append(symbol.upper())
+    if date:
+        conditions.append("DATE(signal_time) = ?")
+        params.append(date)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                f"SELECT * FROM trades {where} ORDER BY signal_time DESC LIMIT ?",
+                params,
+            ).fetchall()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return JSONResponse({"error": f"DB read failed: {exc}"}, status_code=500)
+
+    return JSONResponse([dict(r) for r in rows])
+
+
+# ── GET /journal/summary ──────────────────────────────────────────────────────
+
+@app.get("/journal/summary")
+def journal_summary() -> JSONResponse:
+    """
+    Return session summary for today: trade counts, win/loss/BE, setups, avg RR.
+    'Taken' trades only (taken=1). Uses trader_copilot_journal.db.
+    """
+    today_str = date.today().isoformat()
+
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                "SELECT outcome, pattern, pnl_rr FROM trades "
+                "WHERE taken = 1 AND DATE(signal_time) = ?",
+                (today_str,),
+            ).fetchall()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return JSONResponse({"error": f"DB read failed: {exc}"}, status_code=500)
+
+    wins = losses = breakevens = 0
+    rr_values: list[float] = []
+    setups: dict[str, int] = {}
+
+    for r in rows:
+        outcome = (r["outcome"] or "").lower()
+        if outcome in ("tp_hit", "manual_win"):
+            wins += 1
+        elif outcome in ("sl_hit", "manual_loss"):
+            losses += 1
+        elif outcome == "breakeven":
+            breakevens += 1
+
+        if r["pnl_rr"] is not None:
+            rr_values.append(r["pnl_rr"])
+
+        pat = r["pattern"] or "unknown"
+        setups[pat] = setups.get(pat, 0) + 1
+
+    total = len(rows)
+    avg_rr = round(sum(rr_values) / len(rr_values), 3) if rr_values else None
+
+    return JSONResponse({
+        "session_date":    today_str,
+        "total_trades":    total,
+        "wins":            wins,
+        "losses":          losses,
+        "breakevens":      breakevens,
+        "pending":         total - wins - losses - breakevens,
+        "setups_triggered": setups,
+        "average_rr":      avg_rr,
+    })
 
 
 # ── Background thread launcher ────────────────────────────────────────────────
