@@ -145,8 +145,113 @@ def update_health(pairs: int, cycle: int):
     _health["last_scan"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# ── DB initialisation (runs at process startup via lifespan) ─────────────────
+
+def _init_journal_db() -> None:
+    """Create the trades + schema_migrations tables if they don't exist."""
+    conn = sqlite3.connect(_DB_PATH)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version     INTEGER PRIMARY KEY,
+                description TEXT NOT NULL,
+                applied_at  TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS trades (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol           TEXT NOT NULL,
+                direction        TEXT NOT NULL,
+                pattern          TEXT NOT NULL,
+                timeframe        TEXT,
+                entry_price      REAL NOT NULL,
+                stop_loss        REAL NOT NULL,
+                take_profit      REAL NOT NULL,
+                risk_reward      REAL,
+                confluence_score INTEGER,
+                fvg_present      INTEGER,
+                ob_present       INTEGER,
+                killzone_active  INTEGER,
+                signal_time      TEXT NOT NULL,
+                notes            TEXT,
+                outcome          TEXT DEFAULT 'pending',
+                close_price      REAL,
+                close_time       TEXT,
+                pnl_rr           REAL,
+                session          TEXT,
+                created_at       TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        # Migration 2 — taken column (ALTER TABLE is idempotent via try/except)
+        try:
+            conn.execute(
+                "ALTER TABLE trades ADD COLUMN taken INTEGER NOT NULL DEFAULT 0"
+            )
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        conn.execute(
+            "INSERT OR IGNORE INTO schema_migrations (version, description) "
+            "VALUES (1, 'initial schema -- trades table'), "
+            "       (2, 'add taken column')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _init_risk_guard_db() -> None:
+    """Create session_state + session_log tables if they don't exist."""
+    conn = sqlite3.connect(_RG_DB_PATH)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_state (
+                id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+                firm                        TEXT    NOT NULL,
+                session_date                TEXT    NOT NULL,
+                account_size                REAL    NOT NULL,
+                starting_balance            REAL    NOT NULL,
+                equity_high                 REAL    NOT NULL,
+                daily_pnl                   REAL    NOT NULL DEFAULT 0,
+                trades_today                INTEGER NOT NULL DEFAULT 0,
+                valid_trading_days          INTEGER NOT NULL DEFAULT 0,
+                session_locked              INTEGER NOT NULL DEFAULT 0,
+                revenge_locked_until        TEXT,
+                session_ended_via_hard_stop INTEGER NOT NULL DEFAULT 0,
+                cumulative_pnl              REAL    NOT NULL DEFAULT 0,
+                last_updated                TEXT    NOT NULL,
+                UNIQUE(firm, session_date)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS session_log (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                firm                TEXT    NOT NULL,
+                session_date        TEXT    NOT NULL,
+                session_pnl         REAL    NOT NULL,
+                trades_count        INTEGER NOT NULL,
+                was_valid_day       INTEGER NOT NULL DEFAULT 0,
+                ended_via_hard_stop INTEGER NOT NULL DEFAULT 0,
+                equity_high         REAL    NOT NULL,
+                logged_at           TEXT    NOT NULL
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # ── FastAPI app ───────────────────────────────────────────────────────────────
-app = FastAPI(title="Genuvia Edge Health")
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def _lifespan(app_: FastAPI):
+    _init_journal_db()
+    _init_risk_guard_db()
+    yield
+
+app = FastAPI(title="Genuvia Edge Health", lifespan=_lifespan)
 
 
 _trade_events: List[dict] = []
