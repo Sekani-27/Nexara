@@ -52,9 +52,11 @@ class TradeEvent(BaseModel):
 # ── Journal database ──────────────────────────────────────────────────────────
 # Path is relative to this file so it works both locally and on Railway
 # (Railway mounts /app/data; adjust DB_PATH via env var if needed).
-_DB_PATH = os.environ.get(
-    "JOURNAL_DB_PATH",
-    os.path.join(os.path.dirname(__file__), "trader_copilot_journal.db"),
+# Accepts TRADE_JOURNAL_DB_PATH (Railway) or JOURNAL_DB_PATH (legacy local).
+_DB_PATH = (
+    os.environ.get("TRADE_JOURNAL_DB_PATH")
+    or os.environ.get("JOURNAL_DB_PATH")
+    or os.path.join(os.path.dirname(__file__), "trader_copilot_journal.db")
 )
 
 _RG_DB_PATH = os.environ.get(
@@ -353,6 +355,73 @@ def health() -> JSONResponse:
     return JSONResponse(_health)
 
 
+# ── DB table-discovery helpers ────────────────────────────────────────────────
+
+def _list_tables(db_path: str) -> list[str]:
+    """Return all user table names in the given SQLite database."""
+    try:
+        conn = sqlite3.connect(db_path)
+        try:
+            rows = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            ).fetchall()
+            return [r[0] for r in rows]
+        finally:
+            conn.close()
+    except Exception:
+        return []
+
+
+def _resolve_table(db_path: str, candidates: list[str]) -> Optional[str]:
+    """
+    Return the first candidate table name that actually exists in the DB.
+    Falls back to None if none match (endpoint will surface a clear error).
+    """
+    existing = set(_list_tables(db_path))
+    for name in candidates:
+        if name in existing:
+            return name
+    return None
+
+
+# Known aliases for each logical table — ordered most-likely-first.
+# If Railway uses a different name, add it here.
+_RG_SESSION_CANDIDATES   = ["session_state", "rg_session_state", "risk_guard_session"]
+_JOURNAL_SIGNAL_CANDIDATES = ["trades", "signals", "trade_signals", "journal_trades"]
+
+
+# ── GET /debug/tables ─────────────────────────────────────────────────────────
+
+@app.get("/debug/tables")
+def debug_tables() -> JSONResponse:
+    """
+    Diagnostic: list every table in both SQLite databases plus the resolved paths.
+    Use this to confirm the correct table names on Railway.
+    """
+    def _describe(db_path: str) -> dict:
+        tables = {}
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                names = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                ).fetchall()
+                for (name,) in names:
+                    cols = conn.execute(f"PRAGMA table_info({name})").fetchall()
+                    tables[name] = [c["name"] for c in cols]
+            finally:
+                conn.close()
+            return {"path": db_path, "exists": True, "tables": tables}
+        except Exception as exc:
+            return {"path": db_path, "exists": False, "error": str(exc), "tables": {}}
+
+    return JSONResponse({
+        "risk_guard_db":  _describe(_RG_DB_PATH),
+        "journal_db":     _describe(_DB_PATH),
+    })
+
+
 # ── GET /risk-guard/state ─────────────────────────────────────────────────────
 
 @app.get("/risk-guard/state")
@@ -362,13 +431,23 @@ def risk_guard_state() -> JSONResponse:
     Derives gate status (ALLOW/WARN/BLOCK) and any active prop-firm violations
     from today's session_state row (most recent firm if multiple exist).
     """
+    tbl = _resolve_table(_RG_DB_PATH, _RG_SESSION_CANDIDATES)
+    if tbl is None:
+        actual = _list_tables(_RG_DB_PATH)
+        return JSONResponse(
+            {"error": "session_state table not found",
+             "db_path": _RG_DB_PATH,
+             "tables_found": actual,
+             "hint": "Call GET /debug/tables to inspect the database"},
+            status_code=500,
+        )
+
     try:
         conn = sqlite3.connect(_RG_DB_PATH)
         conn.row_factory = sqlite3.Row
         try:
-            today_str = date.today().isoformat()
             row = conn.execute(
-                "SELECT * FROM session_state ORDER BY last_updated DESC LIMIT 1"
+                f"SELECT * FROM {tbl} ORDER BY last_updated DESC LIMIT 1"
             ).fetchone()
         finally:
             conn.close()
@@ -379,13 +458,12 @@ def risk_guard_state() -> JSONResponse:
         return JSONResponse({"error": "No session state found"}, status_code=404)
 
     row = dict(row)
-    account_size      = row["account_size"]
-    starting_balance  = row["starting_balance"]
-    daily_pnl         = row["daily_pnl"]
-    balance           = round(starting_balance + daily_pnl, 2)
-    daily_loss_pct    = round(daily_pnl / account_size * 100.0, 4) if account_size else 0.0
+    account_size     = row["account_size"]
+    starting_balance = row["starting_balance"]
+    daily_pnl        = row["daily_pnl"]
+    balance          = round(starting_balance + daily_pnl, 2)
+    daily_loss_pct   = round(daily_pnl / account_size * 100.0, 4) if account_size else 0.0
 
-    # Gate status
     violations: list[str] = []
     if row["session_locked"]:
         gate_status = "BLOCK"
@@ -422,6 +500,7 @@ def risk_guard_state() -> JSONResponse:
         "gate_status":        gate_status,
         "prop_firm_violations": violations,
         "last_updated":       row["last_updated"],
+        "_table":             tbl,
     })
 
 
@@ -433,8 +512,19 @@ def get_signals(
     date: Optional[str]   = Query(default=None, description="Filter by signal date YYYY-MM-DD"),
     limit: int            = Query(default=20, ge=1, le=500, description="Max rows to return"),
 ) -> JSONResponse:
-    """Return recent signals from trader_copilot_journal.db with optional filters."""
-    conditions = []
+    """Return recent signals from the journal database with optional filters."""
+    tbl = _resolve_table(_DB_PATH, _JOURNAL_SIGNAL_CANDIDATES)
+    if tbl is None:
+        actual = _list_tables(_DB_PATH)
+        return JSONResponse(
+            {"error": "signals/trades table not found",
+             "db_path": _DB_PATH,
+             "tables_found": actual,
+             "hint": "Call GET /debug/tables to inspect the database"},
+            status_code=500,
+        )
+
+    conditions: list[str] = []
     params: list = []
 
     if symbol:
@@ -452,7 +542,7 @@ def get_signals(
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(
-                f"SELECT * FROM trades {where} ORDER BY signal_time DESC LIMIT ?",
+                f"SELECT * FROM {tbl} {where} ORDER BY signal_time DESC LIMIT ?",
                 params,
             ).fetchall()
         finally:
@@ -469,19 +559,40 @@ def get_signals(
 def journal_summary() -> JSONResponse:
     """
     Return session summary for today: trade counts, win/loss/BE, setups, avg RR.
-    'Taken' trades only (taken=1). Uses trader_copilot_journal.db.
+    'Taken' trades only (taken=1).
     """
+    tbl = _resolve_table(_DB_PATH, _JOURNAL_SIGNAL_CANDIDATES)
+    if tbl is None:
+        actual = _list_tables(_DB_PATH)
+        return JSONResponse(
+            {"error": "signals/trades table not found",
+             "db_path": _DB_PATH,
+             "tables_found": actual,
+             "hint": "Call GET /debug/tables to inspect the database"},
+            status_code=500,
+        )
+
     today_str = date.today().isoformat()
 
+    # 'taken' column may not exist on all Railway DB versions — check columns
     try:
         conn = sqlite3.connect(_DB_PATH)
         conn.row_factory = sqlite3.Row
         try:
-            rows = conn.execute(
-                "SELECT outcome, pattern, pnl_rr FROM trades "
-                "WHERE taken = 1 AND DATE(signal_time) = ?",
-                (today_str,),
-            ).fetchall()
+            col_names = {c[1] for c in conn.execute(f"PRAGMA table_info({tbl})").fetchall()}
+            if "taken" in col_names:
+                rows = conn.execute(
+                    f"SELECT outcome, pattern, pnl_rr FROM {tbl} "
+                    "WHERE taken = 1 AND DATE(signal_time) = ?",
+                    (today_str,),
+                ).fetchall()
+            else:
+                # Fall back: count all resolved signals for today
+                rows = conn.execute(
+                    f"SELECT outcome, pattern, pnl_rr FROM {tbl} "
+                    "WHERE DATE(signal_time) = ?",
+                    (today_str,),
+                ).fetchall()
         finally:
             conn.close()
     except Exception as exc:
@@ -510,14 +621,15 @@ def journal_summary() -> JSONResponse:
     avg_rr = round(sum(rr_values) / len(rr_values), 3) if rr_values else None
 
     return JSONResponse({
-        "session_date":    today_str,
-        "total_trades":    total,
-        "wins":            wins,
-        "losses":          losses,
-        "breakevens":      breakevens,
-        "pending":         total - wins - losses - breakevens,
+        "session_date":     today_str,
+        "total_trades":     total,
+        "wins":             wins,
+        "losses":           losses,
+        "breakevens":       breakevens,
+        "pending":          total - wins - losses - breakevens,
         "setups_triggered": setups,
-        "average_rr":      avg_rr,
+        "average_rr":       avg_rr,
+        "_table":           tbl,
     })
 
 
