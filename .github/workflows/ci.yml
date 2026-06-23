@@ -33,7 +33,7 @@ jobs:
           key: lint-${{ hashFiles('requirements.txt') }}
 
       - name: Install lint tools
-        run: pip install black ruff --quiet
+        run: pip install black==24.4.2 ruff==0.4.4 --quiet
 
       - name: black (format check)
         run: black --check .
