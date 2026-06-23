@@ -11,19 +11,22 @@ Usage:
 import argparse
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from trader_copilot.journal.trade_journal import TradeJournal
 from trader_copilot.ml.confidence_model import ConfidenceModel
 
 
 def train(
-    db_path:    str = "trader_copilot_journal.db",
+    db_path: str = "trader_copilot_journal.db",
     model_path: str = "trader_copilot_model.pkl",
-    symbol:     str = None,
+    symbol: str = None,
 ):
     journal = TradeJournal(db_path=db_path)
-    model   = ConfidenceModel(model_path=model_path)
+    model = ConfidenceModel(model_path=model_path)
 
     # Pull completed trades
     if symbol:
@@ -53,11 +56,13 @@ def train(
         print("── Sample predictions on recent trades ──────────────")
         for t in recent:
             pred = model.predict(t)
-            actual = "WIN" if t["outcome"] in ("tp_hit","manual_win") else "LOSS"
-            print(f"  {t['symbol']:<7} {t['pattern']:<28} "
-                  f"Prob:{pred['win_probability']:.2f}  "
-                  f"Tier:{pred['confidence_tier']:<8}  "
-                  f"Actual:{actual}")
+            actual = "WIN" if t["outcome"] in ("tp_hit", "manual_win") else "LOSS"
+            print(
+                f"  {t['symbol']:<7} {t['pattern']:<28} "
+                f"Prob:{pred['win_probability']:.2f}  "
+                f"Tier:{pred['confidence_tier']:<8}  "
+                f"Actual:{actual}"
+            )
         print()
 
     return model
@@ -65,8 +70,8 @@ def train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trader Copilot ML Trainer")
-    parser.add_argument("--db",     default="trader_copilot_journal.db")
-    parser.add_argument("--model",  default="trader_copilot_model.pkl")
+    parser.add_argument("--db", default="trader_copilot_journal.db")
+    parser.add_argument("--model", default="trader_copilot_model.pkl")
     parser.add_argument("--symbol", default=None)
     args = parser.parse_args()
 

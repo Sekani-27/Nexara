@@ -21,7 +21,7 @@ from risk_guard.models import FirmConfig
 # ─────────────────────────────────────────────────────────────────────────────
 
 ACCOUNT = 10_000.0
-FIRM    = "TESTFIRM"
+FIRM = "TESTFIRM"
 
 
 def _config() -> FirmConfig:
@@ -51,13 +51,14 @@ def _tmpdb() -> str:
     """Return a path to a fresh temporary SQLite file."""
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
-    os.unlink(path)   # delete so RiskGuardState creates it clean
+    os.unlink(path)  # delete so RiskGuardState creates it clean
     return path
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 1 — PERSISTENCE ACROSS INSTANTIATION
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_state_persists_across_restart():
     """
@@ -69,27 +70,27 @@ def test_state_persists_across_restart():
 
     try:
         # First instance — create and modify state
-        db1   = RiskGuardState(db_path=path)
+        db1 = RiskGuardState(db_path=path)
         state = db1.load_or_create(FIRM, ACCOUNT, today=today)
         assert state.trades_today == 0
-        assert state.daily_pnl   == 0.0
+        assert state.daily_pnl == 0.0
 
         state.trades_today = 2
-        state.daily_pnl    = 150.0
-        state.equity_high  = ACCOUNT + 150.0
+        state.daily_pnl = 150.0
+        state.equity_high = ACCOUNT + 150.0
         db1.save(state)
 
         # Second instance — completely new Python object, same file
-        db2       = RiskGuardState(db_path=path)
-        reloaded  = db2.load_or_create(FIRM, ACCOUNT, today=today)
+        db2 = RiskGuardState(db_path=path)
+        reloaded = db2.load_or_create(FIRM, ACCOUNT, today=today)
 
-        assert reloaded.trades_today == 2,    f"Expected 2, got {reloaded.trades_today}"
-        assert reloaded.daily_pnl    == 150.0, f"Expected 150.0, got {reloaded.daily_pnl}"
-        assert reloaded.equity_high  == ACCOUNT + 150.0
+        assert reloaded.trades_today == 2, f"Expected 2, got {reloaded.trades_today}"
+        assert reloaded.daily_pnl == 150.0, f"Expected 150.0, got {reloaded.daily_pnl}"
+        assert reloaded.equity_high == ACCOUNT + 150.0
 
         print("PASS — state persists: trades_today=2, daily_pnl=150 survived restart")
     finally:
-        gc.collect()   # release SQLite file handles before deletion (Windows)
+        gc.collect()  # release SQLite file handles before deletion (Windows)
         if os.path.exists(path):
             os.unlink(path)
 
@@ -98,27 +99,28 @@ def test_state_persists_across_restart():
 # TEST 2 — NEW DAY CREATES FRESH STATE
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_new_day_creates_fresh_state():
     """
     load_or_create() for a date that has no existing record must return a
     fresh session: daily_pnl=0, trades_today=0, session_locked=False.
     """
-    path  = _tmpdb()
+    path = _tmpdb()
     today = date.today()
 
     try:
-        db    = RiskGuardState(db_path=path)
+        db = RiskGuardState(db_path=path)
         state = db.load_or_create(FIRM, ACCOUNT, today=today)
 
-        assert state.daily_pnl            == 0.0,  "Fresh state: daily_pnl must be 0"
-        assert state.trades_today         == 0,    "Fresh state: trades_today must be 0"
-        assert state.session_locked       is False, "Fresh state: must not be locked"
-        assert state.revenge_locked_until is None,  "Fresh state: no revenge lock"
-        assert state.session_date         == today.isoformat()
+        assert state.daily_pnl == 0.0, "Fresh state: daily_pnl must be 0"
+        assert state.trades_today == 0, "Fresh state: trades_today must be 0"
+        assert state.session_locked is False, "Fresh state: must not be locked"
+        assert state.revenge_locked_until is None, "Fresh state: no revenge lock"
+        assert state.session_date == today.isoformat()
 
         print(f"PASS — new day creates fresh state for {today}")
     finally:
-        gc.collect()   # release SQLite file handles before deletion (Windows)
+        gc.collect()  # release SQLite file handles before deletion (Windows)
         if os.path.exists(path):
             os.unlink(path)
 
@@ -126,6 +128,7 @@ def test_new_day_creates_fresh_state():
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 3 — ROLLOVER RESETS DAILY FIELDS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_rollover_resets_daily_fields():
     """
@@ -135,31 +138,33 @@ def test_rollover_resets_daily_fields():
       - starting_balance = prior session's ending balance
       - cumulative_pnl carries forward
     """
-    path  = _tmpdb()
+    path = _tmpdb()
     today = date.today()
     next_ = today + timedelta(days=1)
     config = _config()
 
     try:
-        db    = RiskGuardState(db_path=path)
+        db = RiskGuardState(db_path=path)
         state = db.load_or_create(FIRM, ACCOUNT, today=today)
 
         # Simulate a profitable session
-        state.daily_pnl    = 300.0
+        state.daily_pnl = 300.0
         state.trades_today = 2
-        state.equity_high  = ACCOUNT + 300.0
+        state.equity_high = ACCOUNT + 300.0
         db.save(state)
 
         # Roll over to next day
         new_state = db.rollover(state, next_, config)
 
-        assert new_state.daily_pnl    == 0.0,            "Rollover: daily_pnl must reset to 0"
-        assert new_state.trades_today == 0,              "Rollover: trades_today must reset to 0"
+        assert new_state.daily_pnl == 0.0, "Rollover: daily_pnl must reset to 0"
+        assert new_state.trades_today == 0, "Rollover: trades_today must reset to 0"
         assert new_state.session_date == next_.isoformat()
-        assert new_state.starting_balance == ACCOUNT + 300.0, \
-            "Rollover: starting_balance must carry prior ending balance"
-        assert new_state.cumulative_pnl == 300.0, \
-            "Rollover: cumulative_pnl must accumulate prior session P&L"
+        assert (
+            new_state.starting_balance == ACCOUNT + 300.0
+        ), "Rollover: starting_balance must carry prior ending balance"
+        assert (
+            new_state.cumulative_pnl == 300.0
+        ), "Rollover: cumulative_pnl must accumulate prior session P&L"
 
         print(
             f"PASS — rollover resets daily fields | "
@@ -167,7 +172,7 @@ def test_rollover_resets_daily_fields():
             f"cumulative=${new_state.cumulative_pnl}"
         )
     finally:
-        gc.collect()   # release SQLite file handles before deletion (Windows)
+        gc.collect()  # release SQLite file handles before deletion (Windows)
         if os.path.exists(path):
             os.unlink(path)
 
@@ -176,72 +181,77 @@ def test_rollover_resets_daily_fields():
 # TEST 4 — REVENGE LOCK SET AFTER HARD-STOP SESSION
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_revenge_lock_set_after_hard_stop_session():
     """
     If session_ended_via_hard_stop=True on rollover, the new session must
     have revenge_locked_until set to (now + revenge_lock_hours).
     """
-    path   = _tmpdb()
-    today  = date.today()
-    next_  = today + timedelta(days=1)
-    config = _config()   # revenge_lock_hours = 24
+    path = _tmpdb()
+    today = date.today()
+    next_ = today + timedelta(days=1)
+    config = _config()  # revenge_lock_hours = 24
 
     try:
-        db    = RiskGuardState(db_path=path)
+        db = RiskGuardState(db_path=path)
         state = db.load_or_create(FIRM, ACCOUNT, today=today)
 
         # Simulate hard stop being hit during the session
         state.session_ended_via_hard_stop = True
-        state.session_locked              = True
-        state.daily_pnl                   = -375.0
+        state.session_locked = True
+        state.daily_pnl = -375.0
         db.save(state)
 
         new_state = db.rollover(state, next_, config)
 
-        assert new_state.revenge_locked_until is not None, \
-            "Revenge lock must be set after hard-stop rollover"
-        assert new_state.session_locked is False, \
-            "New session must start unlocked"
-        assert new_state.session_ended_via_hard_stop is False, \
-            "New session must reset hard-stop flag"
+        assert (
+            new_state.revenge_locked_until is not None
+        ), "Revenge lock must be set after hard-stop rollover"
+        assert new_state.session_locked is False, "New session must start unlocked"
+        assert (
+            new_state.session_ended_via_hard_stop is False
+        ), "New session must reset hard-stop flag"
 
         # Verify the unlock time is ~24 h in the future
         from datetime import datetime
+
         unlock_dt = datetime.fromisoformat(new_state.revenge_locked_until)
         hours_ahead = (unlock_dt - datetime.utcnow()).total_seconds() / 3600
-        assert 23.0 < hours_ahead < 25.0, \
-            f"Revenge lock should be ~24h ahead, got {hours_ahead:.1f}h"
+        assert (
+            23.0 < hours_ahead < 25.0
+        ), f"Revenge lock should be ~24h ahead, got {hours_ahead:.1f}h"
 
         print(
             f"PASS — revenge lock set after hard stop | "
             f"unlocks at {new_state.revenge_locked_until[:16]} UTC"
         )
     finally:
-        gc.collect()   # release SQLite file handles before deletion (Windows)
+        gc.collect()  # release SQLite file handles before deletion (Windows)
         if os.path.exists(path):
             os.unlink(path)
 
 
 def test_no_revenge_lock_after_normal_session():
     """Normal session rollover must NOT set revenge_locked_until."""
-    path   = _tmpdb()
-    today  = date.today()
-    next_  = today + timedelta(days=1)
+    path = _tmpdb()
+    today = date.today()
+    next_ = today + timedelta(days=1)
     config = _config()
 
     try:
-        db    = RiskGuardState(db_path=path)
+        db = RiskGuardState(db_path=path)
         state = db.load_or_create(FIRM, ACCOUNT, today=today)
-        state.daily_pnl = 100.0   # normal positive session
+        state.daily_pnl = 100.0  # normal positive session
         db.save(state)
 
         new_state = db.rollover(state, next_, config)
 
-        assert new_state.revenge_locked_until is None, \
-            "Normal session must NOT set a revenge lock"
+        assert (
+            new_state.revenge_locked_until is None
+        ), "Normal session must NOT set a revenge lock"
         print("PASS — normal session rollover has no revenge lock")
     finally:
-        gc.collect()   # release SQLite file handles before deletion (Windows)
+        gc.collect()  # release SQLite file handles before deletion (Windows)
         if os.path.exists(path):
             os.unlink(path)
 
@@ -266,6 +276,7 @@ if __name__ == "__main__":
             passed += 1
         except Exception as exc:
             import traceback
+
             print(f"FAIL — {t.__name__}: {exc}")
             traceback.print_exc()
             failed += 1

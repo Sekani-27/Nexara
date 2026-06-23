@@ -19,7 +19,7 @@ Features extracted per trade:
 
 import math
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import List, Tuple, Optional
 from datetime import datetime
 
 
@@ -35,8 +35,14 @@ PATTERN_TYPES = [
 
 SYMBOLS = ["XAUUSDm", "USTEC_x100m", "EURUSDm", "GBPUSDm"]
 
-SESSIONS = ["london", "london_open", "new_york", "new_york_open",
-            "london_ny_overlap_pre", "off_session"]
+SESSIONS = [
+    "london",
+    "london_open",
+    "new_york",
+    "new_york_open",
+    "london_ny_overlap_pre",
+    "off_session",
+]
 
 
 def trade_to_features(trade: dict) -> Optional[np.ndarray]:
@@ -67,11 +73,11 @@ def trade_to_features(trade: dict) -> Optional[np.ndarray]:
         direction = 1.0 if trade.get("direction") == "bullish" else 0.0
 
         # ── Confluence factors (5 features)
-        score   = float(trade.get("confluence_score", 3)) / 5.0   # normalise 0-1
-        fvg     = float(bool(trade.get("fvg_present", 0)))
-        ob      = float(bool(trade.get("ob_present", 0)))
-        unicorn = fvg * ob                                          # both present
-        kz      = float(bool(trade.get("killzone_active", 0)))
+        score = float(trade.get("confluence_score", 3)) / 5.0  # normalise 0-1
+        fvg = float(bool(trade.get("fvg_present", 0)))
+        ob = float(bool(trade.get("ob_present", 0)))
+        unicorn = fvg * ob  # both present
+        kz = float(bool(trade.get("killzone_active", 0)))
 
         # ── Risk:Reward (1 feature, clipped 0-5)
         rr = float(trade.get("risk_reward", 2.0))
@@ -80,32 +86,32 @@ def trade_to_features(trade: dict) -> Optional[np.ndarray]:
         # ── Temporal: hour of day cyclical (2 features)
         signal_time = trade.get("signal_time", "")
         try:
-            ts   = datetime.fromisoformat(signal_time)
+            ts = datetime.fromisoformat(signal_time)
             hour = ts.hour + ts.minute / 60.0
-            dow  = ts.weekday()
+            dow = ts.weekday()
         except Exception:
             hour = 12.0
-            dow  = 1
+            dow = 1
 
         hour_sin = math.sin(2 * math.pi * hour / 24.0)
         hour_cos = math.cos(2 * math.pi * hour / 24.0)
-        dow_sin  = math.sin(2 * math.pi * dow / 5.0)
-        dow_cos  = math.cos(2 * math.pi * dow / 5.0)
+        dow_sin = math.sin(2 * math.pi * dow / 5.0)
+        dow_cos = math.cos(2 * math.pi * dow / 5.0)
 
         # ── Assemble feature vector
         features = (
-            pattern_vec      +   # 6
-            symbol_vec       +   # 4
-            session_vec      +   # 6
-            [direction]      +   # 1
-            [score, fvg, ob, unicorn, kz]  +  # 5
-            [rr_norm]        +   # 1
-            [hour_sin, hour_cos, dow_sin, dow_cos]  # 4
+            pattern_vec  # 6
+            + symbol_vec  # 4
+            + session_vec  # 6
+            + [direction]  # 1
+            + [score, fvg, ob, unicorn, kz]  # 5
+            + [rr_norm]  # 1
+            + [hour_sin, hour_cos, dow_sin, dow_cos]  # 4
         )
 
         return np.array(features, dtype=np.float32)
 
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -155,8 +161,10 @@ def feature_names() -> List[str]:
         "unicorn_confluence",
         "killzone_active",
         "rr_norm",
-        "hour_sin", "hour_cos",
-        "dow_sin",  "dow_cos",
+        "hour_sin",
+        "hour_cos",
+        "dow_sin",
+        "dow_cos",
     ]
     return names
 

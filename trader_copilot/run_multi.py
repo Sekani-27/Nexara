@@ -9,27 +9,48 @@ Usage:
     python -m trader_copilot.run_multi --webhook URL1 --webhook URL2
     python -m trader_copilot.run_multi --interval 30
 """
+
 import argparse
 import time
 import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
+
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger("trader_copilot.multi_runner")
 # ─────────────────────────────────────────────
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 CURRENCY_PAIRS = {
-    "EURUSDm", "GBPUSDm", "USDJPYm", "USDCHFm", "AUDUSDm", "USDCADm", "NZDUSDm",
-    "EURGBPm", "EURJPYm", "EURCHFm", "EURAUDm", "EURCADm", "EURNZDm",
-    "GBPJPYm", "GBPCHFm", "GBPAUDm", "GBPCADm", "GBPNZDm",
-    "AUDJPYm", "CADJPYm", "CHFJPYm", "NZDJPYm",
+    "EURUSDm",
+    "GBPUSDm",
+    "USDJPYm",
+    "USDCHFm",
+    "AUDUSDm",
+    "USDCADm",
+    "NZDUSDm",
+    "EURGBPm",
+    "EURJPYm",
+    "EURCHFm",
+    "EURAUDm",
+    "EURCADm",
+    "EURNZDm",
+    "GBPJPYm",
+    "GBPCHFm",
+    "GBPAUDm",
+    "GBPCADm",
+    "GBPNZDm",
+    "AUDJPYm",
+    "CADJPYm",
+    "CHFJPYm",
+    "NZDJPYm",
 }
 COMMODITY_PAIRS = {"XAUUSDm", "USTEC_x100m"}
 ALL_PAIRS = sorted(CURRENCY_PAIRS | COMMODITY_PAIRS)
+
+
 # ─────────────────────────────────────────────
 # DUPLICATE PREVENTION
 # ─────────────────────────────────────────────
@@ -37,19 +58,25 @@ class AlertTracker:
     def __init__(self, ttl_cycles: int = 5):
         self.ttl_cycles = ttl_cycles
         self._active: Dict[str, int] = {}
+
     def _key(self, symbol: str, direction: str, entry_price: float) -> str:
         return f"{symbol}:{direction}:{round(entry_price, 4)}"
+
     def is_duplicate(self, symbol: str, direction: str, entry_price: float) -> bool:
         return self._key(symbol, direction, entry_price) in self._active
+
     def register(self, symbol: str, direction: str, entry_price: float):
         key = self._key(symbol, direction, entry_price)
         self._active[key] = self.ttl_cycles
+
     def tick(self):
         expired = [k for k, ttl in self._active.items() if ttl <= 1]
         for k in expired:
             del self._active[k]
         for k in self._active:
             self._active[k] -= 1
+
+
 # ─────────────────────────────────────────────
 # PAIR SCANNER
 # ─────────────────────────────────────────────
@@ -86,6 +113,8 @@ def scan_pair(symbol, engine, mt5, config, tracker: AlertTracker) -> bool:
     except Exception as e:
         logger.error(f"{symbol} — Error during scan: {e}", exc_info=True)
         return False
+
+
 # ─────────────────────────────────────────────
 # MAIN RUNNER
 # ─────────────────────────────────────────────
@@ -93,6 +122,7 @@ def run(pairs: list, interval_minutes: int, webhook_urls: Optional[List[str]] = 
     from trader_copilot.engine import TraderCopilot
     from trader_copilot.utils.mt5_connector import MT5Connector
     from trader_copilot.config.pairs import PAIR_CONFIGS
+
     invalid = [p for p in pairs if p not in PAIR_CONFIGS]
     if invalid:
         logger.error(f"Unknown pairs: {invalid}. Supported: {ALL_PAIRS}")
@@ -108,13 +138,13 @@ def run(pairs: list, interval_minutes: int, webhook_urls: Optional[List[str]] = 
         engines[symbol] = TraderCopilot(
             symbol=symbol,
             webhook_urls=webhook_urls or [],
-            log_path=f"{symbol}_alerts.jsonl"
+            log_path=f"{symbol}_alerts.jsonl",
         )
         configs[symbol] = PAIR_CONFIGS[symbol]
     tracker = AlertTracker(ttl_cycles=5)
     webhook_display = f"{len(webhook_urls)} recipient(s)" if webhook_urls else "none"
     logger.info(f"{'═' * 55}")
-    logger.info(f"  Trader Copilot — Multi-Pair Runner")
+    logger.info("  Trader Copilot — Multi-Pair Runner")
     logger.info(f"  Pairs     : {', '.join(pairs)}")
     logger.info(f"  Interval  : {interval_minutes} minutes")
     logger.info(f"  Webhook   : {webhook_display}")
@@ -148,6 +178,8 @@ def run(pairs: list, interval_minutes: int, webhook_urls: Optional[List[str]] = 
     finally:
         mt5.disconnect()
         logger.info("MT5 disconnected.")
+
+
 # ─────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────
@@ -155,8 +187,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Trader Copilot — Multi-Pair Runner")
     parser.add_argument("--pairs", nargs="+", default=ALL_PAIRS, choices=ALL_PAIRS)
     parser.add_argument("--interval", default=30, type=int)
-    parser.add_argument("--webhook", action="append", dest="webhooks", default=None,
-                        help="Webhook URL — repeat for multiple recipients")
+    parser.add_argument(
+        "--webhook",
+        action="append",
+        dest="webhooks",
+        default=None,
+        help="Webhook URL — repeat for multiple recipients",
+    )
     args = parser.parse_args()
     run(
         pairs=args.pairs,

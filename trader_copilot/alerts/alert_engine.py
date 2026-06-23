@@ -40,19 +40,20 @@ logger = logging.getLogger("trader_copilot.alerts")
 try:
     from dotenv import load_dotenv as _load_dotenv
     from pathlib import Path as _Path
+
     # Try the project root .env (two levels up from this file)
     _load_dotenv(_Path(__file__).parent.parent.parent / ".env", override=False)
 except Exception:
     pass  # dotenv not installed or file missing — that's fine on Railway
 
-_TG_TOKEN:   Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
+_TG_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
 _TG_CHAT_ID: Optional[str] = os.getenv("TELEGRAM_CHAT_ID")
 
 # Log credential status at import time so it appears in every Railway deploy log.
 if _TG_TOKEN and _TG_CHAT_ID:
     logger.info(
         "Telegram credentials loaded — token ...%s  chat_id %s",
-        _TG_TOKEN[-6:],   # last 6 chars only — enough to verify without exposing
+        _TG_TOKEN[-6:],  # last 6 chars only — enough to verify without exposing
         _TG_CHAT_ID,
     )
 else:
@@ -60,7 +61,7 @@ else:
         "Telegram credentials MISSING — "
         "TELEGRAM_BOT_TOKEN=%s  TELEGRAM_CHAT_ID=%s  "
         "Alerts will be printed to stdout only.",
-        "set" if _TG_TOKEN   else "NOT SET",
+        "set" if _TG_TOKEN else "NOT SET",
         "set" if _TG_CHAT_ID else "NOT SET",
     )
 
@@ -89,11 +90,11 @@ class AlertEngine:
         self,
         webhook_urls: Optional[List[str]] = None,
         log_path: Optional[str] = None,
-        risk_guard=None,   # optional RiskGuard instance for pre-dispatch gating
+        risk_guard=None,  # optional RiskGuard instance for pre-dispatch gating
     ):
         self.webhook_urls = webhook_urls or []
-        self.log_path     = log_path
-        self.risk_guard   = risk_guard   # set to a RiskGuard instance to enable
+        self.log_path = log_path
+        self.risk_guard = risk_guard  # set to a RiskGuard instance to enable
 
         # Bug 3 — pending setup dedup + expiry.
         # Key: "symbol:pattern:direction:entry_price_4dp"
@@ -119,8 +120,8 @@ class AlertEngine:
 
     def format_alert(self, signal: TradeSignal) -> str:
         direction_label = DIRECTION_EMOJI.get(signal.direction, "—")
-        score_label     = SCORE_LABELS.get(signal.confluence_score, "UNKNOWN")
-        confluences     = []
+        score_label = SCORE_LABELS.get(signal.confluence_score, "UNKNOWN")
+        confluences = []
 
         if signal.fvg_present:
             confluences.append("FVG at neckline")
@@ -205,11 +206,11 @@ class AlertEngine:
                 proposal = _rg.TradeProposal(
                     firm=self.risk_guard.config.name,
                     account_size=self.risk_guard.state.account_size,
-                    proposed_risk_dollars=0.0,   # dollar risk not carried on signal
+                    proposed_risk_dollars=0.0,  # dollar risk not carried on signal
                     current_daily_pnl=self.risk_guard.state.daily_pnl,
                     open_risk_dollars=0.0,
                     trades_today=self.risk_guard.state.trades_today,
-                    estimated_hold_minutes=60.0, # conservative default
+                    estimated_hold_minutes=60.0,  # conservative default
                 )
                 decision = self.risk_guard.check_trade(proposal)
                 logger.info(
@@ -222,15 +223,24 @@ class AlertEngine:
                     block_text = _rg.alerts.format_block(decision)
                     logger.warning(
                         "Risk Guard BLOCKED signal for %s: %s",
-                        signal.symbol, decision.reason,
+                        signal.symbol,
+                        decision.reason,
                     )
                     print(block_text)
                     if self.log_path:
                         with open(self.log_path, "a") as f:
-                            f.write(json.dumps({
-                                "type": "rg_block", "reason": decision.reason,
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
-                            }) + "\n")
+                            f.write(
+                                json.dumps(
+                                    {
+                                        "type": "rg_block",
+                                        "reason": decision.reason,
+                                        "timestamp": datetime.now(
+                                            timezone.utc
+                                        ).isoformat(),
+                                    }
+                                )
+                                + "\n"
+                            )
                     if self.webhook_urls:
                         self._send_webhook(block_text)
                     self._send_telegram(block_text)
@@ -246,7 +256,8 @@ class AlertEngine:
             except Exception as exc:
                 logger.error(
                     "Risk Guard check raised an exception — bypassing gate: %s",
-                    exc, exc_info=True,
+                    exc,
+                    exc_info=True,
                 )
                 alert_text = self.format_alert(signal)
         else:
@@ -270,6 +281,7 @@ class AlertEngine:
         # Falls back to the local file so local runs need no configuration.
         try:
             from ..journal.trade_journal import TradeJournal
+
             _journal_path = os.getenv(
                 "TRADE_JOURNAL_DB_PATH", "trader_copilot_journal.db"
             )
@@ -302,7 +314,9 @@ class AlertEngine:
         candle_time: Optional[datetime] = None,
     ) -> str:
         direction_label = DIRECTION_EMOJI.get(direction, "—") if direction else "—"
-        display_time = candle_time if candle_time is not None else datetime.now(timezone.utc)
+        display_time = (
+            candle_time if candle_time is not None else datetime.now(timezone.utc)
+        )
 
         alert = f"""
 ╔══════════════════════════════════════╗
@@ -333,7 +347,9 @@ class AlertEngine:
         direction: Optional[Direction] = None,
         candle_time: Optional[datetime] = None,
     ) -> dict:
-        display_time = candle_time if candle_time is not None else datetime.now(timezone.utc)
+        display_time = (
+            candle_time if candle_time is not None else datetime.now(timezone.utc)
+        )
         return {
             "type": "pending",
             "symbol": symbol,
@@ -369,9 +385,9 @@ class AlertEngine:
         """
         # ── Pending dedup / expiry gate ───────────────────────────────────────
         dir_str = direction.value if direction else "none"
-        key     = f"{symbol}:{pattern}:{dir_str}:{round(entry_price, 4)}"
-        now     = datetime.now(timezone.utc)
-        expiry  = timedelta(hours=self.PENDING_EXPIRY_HOURS)
+        key = f"{symbol}:{pattern}:{dir_str}:{round(entry_price, 4)}"
+        now = datetime.now(timezone.utc)
+        expiry = timedelta(hours=self.PENDING_EXPIRY_HOURS)
 
         if key in self._pending_seen:
             age = now - self._pending_seen[key]
@@ -393,14 +409,17 @@ class AlertEngine:
                     entry_price,
                 )
                 del self._pending_seen[key]
-                return   # Do not re-log an expired setup
+                return  # Do not re-log an expired setup
 
         # ── First occurrence — record and dispatch ────────────────────────────
         self._pending_seen[key] = now
         logger.info(
             "Pending setup FIRST LOG — %s %s  watch=%.5f  "
             "will suppress re-logs for %dh",
-            symbol, pattern, entry_price, self.PENDING_EXPIRY_HOURS,
+            symbol,
+            pattern,
+            entry_price,
+            self.PENDING_EXPIRY_HOURS,
         )
 
         alert_text = self.format_pending_alert(
@@ -418,16 +437,26 @@ class AlertEngine:
             pending_log_path = self.log_path.replace(".jsonl", "_pending.jsonl")
             try:
                 with open(pending_log_path, "a") as f:
-                    f.write(json.dumps(self.format_pending_json(
-                        symbol=symbol,
-                        pattern=pattern,
-                        entry_price=entry_price,
-                        stop_loss=stop_loss,
-                        notes=notes,
-                        direction=direction,
-                        candle_time=candle_time,
-                    )) + "\n")
-                logger.info("Pending setup logged: %s %s — watch %.5f", symbol, pattern, entry_price)
+                    f.write(
+                        json.dumps(
+                            self.format_pending_json(
+                                symbol=symbol,
+                                pattern=pattern,
+                                entry_price=entry_price,
+                                stop_loss=stop_loss,
+                                notes=notes,
+                                direction=direction,
+                                candle_time=candle_time,
+                            )
+                        )
+                        + "\n"
+                    )
+                logger.info(
+                    "Pending setup logged: %s %s — watch %.5f",
+                    symbol,
+                    pattern,
+                    entry_price,
+                )
             except Exception as exc:
                 logger.error("Failed to write pending log: %s", exc, exc_info=True)
 
@@ -457,15 +486,18 @@ class AlertEngine:
             logger.debug("_send_telegram: skipped (credentials not set)")
             return
 
-        url     = f"https://api.telegram.org/bot{_TG_TOKEN}/sendMessage"
-        payload = json.dumps({
-            "chat_id": _TG_CHAT_ID,
-            "text":    message,
-        }).encode("utf-8")
+        url = f"https://api.telegram.org/bot{_TG_TOKEN}/sendMessage"
+        payload = json.dumps(
+            {
+                "chat_id": _TG_CHAT_ID,
+                "text": message,
+            }
+        ).encode("utf-8")
 
         logger.info(
             "Telegram: sending to chat_id=%s  (%d chars)…",
-            _TG_CHAT_ID, len(message),
+            _TG_CHAT_ID,
+            len(message),
         )
 
         try:
@@ -477,14 +509,15 @@ class AlertEngine:
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 status = resp.status
-                body   = resp.read().decode("utf-8", errors="replace")
+                body = resp.read().decode("utf-8", errors="replace")
 
             if status == 200:
                 logger.info("Telegram: message delivered OK (HTTP 200)")
             else:
                 logger.error(
                     "Telegram: unexpected HTTP %d — response: %s",
-                    status, body[:300],
+                    status,
+                    body[:300],
                 )
 
         except urllib.error.HTTPError as exc:
@@ -495,7 +528,9 @@ class AlertEngine:
                 err_body = "<unreadable>"
             logger.error(
                 "Telegram: HTTP %d error — %s — body: %s",
-                exc.code, exc.reason, err_body[:300],
+                exc.code,
+                exc.reason,
+                err_body[:300],
             )
 
         except urllib.error.URLError as exc:
@@ -508,7 +543,8 @@ class AlertEngine:
         except Exception as exc:
             logger.error(
                 "Telegram: unexpected exception — %s",
-                exc, exc_info=True,
+                exc,
+                exc_info=True,
             )
 
     # ─────────────────────────────────────────────
@@ -535,5 +571,7 @@ class AlertEngine:
             except Exception as exc:
                 logger.error(
                     "Webhook: dispatch failed for %s — %s",
-                    url[:60], exc, exc_info=True,
+                    url[:60],
+                    exc,
+                    exc_info=True,
                 )

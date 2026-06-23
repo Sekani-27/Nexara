@@ -15,8 +15,11 @@ from trader_copilot.config.pairs import PAIR_CONFIGS
 def make_candle(open_, high, low, close, i=0, tf="5M") -> Candle:
     return Candle(
         timestamp=datetime(2024, 1, 1, 0, 0) + timedelta(minutes=5 * i),
-        open=open_, high=high, low=low, close=close,
-        timeframe=tf
+        open=open_,
+        high=high,
+        low=low,
+        close=close,
+        timeframe=tf,
     )
 
 
@@ -90,9 +93,13 @@ def test_fvg_detection():
     assert fvg is not None, "Should detect bearish FVG"
     assert fvg.top == 1.1000, f"FVG top should be 1.1000, got {fvg.top}"
     assert fvg.bottom == 1.0990, f"FVG bottom should be 1.0990, got {fvg.bottom}"
-    assert fvg.size >= config.fvg_min_pips * config.pip_size, "FVG size should meet minimum"
+    assert (
+        fvg.size >= config.fvg_min_pips * config.pip_size
+    ), "FVG size should meet minimum"
 
-    print(f"PASS — FVG detected: top={fvg.top}, bottom={fvg.bottom}, size={fvg.size:.5f}")
+    print(
+        f"PASS — FVG detected: top={fvg.top}, bottom={fvg.bottom}, size={fvg.size:.5f}"
+    )
 
 
 def test_equal_highs_detection():
@@ -103,12 +110,17 @@ def test_equal_highs_detection():
     engine = StructureEngine(config)
 
     candles = [make_candle(18000, 18100 + i * 50, 17900, 18050, i=i) for i in range(20)]
-    swings = engine.detect_swings(candles, left=2, right=2)
+    _swings = engine.detect_swings(candles, left=2, right=2)
 
     # Manually inject two equal highs
     from trader_copilot.core.structures import SwingPoint
-    swing1 = SwingPoint(candle=candles[5],  swing_type=StructureType.HH, level=19000.0, index=5)
-    swing2 = SwingPoint(candle=candles[15], swing_type=StructureType.EQH, level=19015.0, index=15)  # 15pt gap < 20pt tolerance
+
+    swing1 = SwingPoint(
+        candle=candles[5], swing_type=StructureType.HH, level=19000.0, index=5
+    )
+    swing2 = SwingPoint(
+        candle=candles[15], swing_type=StructureType.EQH, level=19015.0, index=15
+    )  # 15pt gap < 20pt tolerance
 
     eq_pairs = engine.find_equal_levels([swing1, swing2], level_type="high")
     assert len(eq_pairs) > 0, "Should find equal high pair within NAS100 tolerance"
@@ -153,11 +165,15 @@ def test_killzone_filter():
     config = PAIR_CONFIGS["XAUUSD"]
     gen = SignalGenerator(config)
 
-    inside_kz  = datetime(2024, 1, 2, 13, 30)  # 13:30 UTC — NY open
-    outside_kz = datetime(2024, 1, 2, 10, 0)   # 10:00 UTC — outside for XAUUSD
+    inside_kz = datetime(2024, 1, 2, 13, 30)  # 13:30 UTC — NY open
+    outside_kz = datetime(2024, 1, 2, 10, 0)  # 10:00 UTC — outside for XAUUSD
 
-    assert gen.is_killzone_active(inside_kz)  == True,  "13:30 UTC should be in NY open KZ"
-    assert gen.is_killzone_active(outside_kz) == False, "10:00 UTC should be outside XAUUSD KZ"
+    assert (
+        gen.is_killzone_active(inside_kz) is True
+    ), "13:30 UTC should be in NY open KZ"
+    assert (
+        gen.is_killzone_active(outside_kz) is False
+    ), "10:00 UTC should be outside XAUUSD KZ"
     print("PASS — Killzone filter working for XAUUSD")
 
 

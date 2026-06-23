@@ -17,21 +17,21 @@ from datetime import datetime, timezone
 BASE_URL = "https://nexara-production-6da6.up.railway.app"
 
 PAYLOAD = {
-    "ticket":      99999,
-    "symbol":      "EURUSD",
-    "direction":   "BUY",
-    "lot_size":    0.01,
+    "ticket": 99999,
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "lot_size": 0.01,
     "entry_price": 1.08500,
-    "sl":          1.08000,
-    "tp":          1.09000,
-    "event":       "OPEN",
-    "timestamp":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "sl": 1.08000,
+    "tp": 1.09000,
+    "event": "OPEN",
+    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 
 
 def post_json(url: str, data: dict) -> tuple[int, dict]:
     body = json.dumps(data).encode()
-    req  = urllib.request.Request(
+    req = urllib.request.Request(
         url,
         data=body,
         headers={"Content-Type": "application/json"},
@@ -63,7 +63,9 @@ def main():
     print(f"Response {status}: {json.dumps(body, indent=2)}\n")
 
     if status not in (200, 201):
-        print("WARNING: webhook returned a non-2xx status — tables may not have been created.")
+        print(
+            "WARNING: webhook returned a non-2xx status — tables may not have been created."
+        )
 
     # ── Step 2: verify schema via /debug/tables ───────────────────────────────
     debug_url = f"{BASE_URL}/debug/tables"

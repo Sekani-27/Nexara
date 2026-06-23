@@ -16,11 +16,15 @@ Scoring logic:
     +1 Unicorn model (OB + FVG together)
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from ..core.structures import (
-    Candle, Direction, BiasType, TradeSignal,
-    FairValueGap, OrderBlock, LiquiditySweep
+    Candle,
+    Direction,
+    BiasType,
+    TradeSignal,
+    OrderBlock,
+    LiquiditySweep,
 )
 from ..patterns.pattern_engine import PatternResult
 from ..config.pairs import PairConfig, KILLZONE_WINDOWS
@@ -44,9 +48,8 @@ class ConfluenceScorer:
 
         # Base requirements
         bias_match = (
-            (bias == BiasType.BEARISH and pattern.direction == Direction.BEARISH) or
-            (bias == BiasType.BULLISH and pattern.direction == Direction.BULLISH)
-        )
+            bias == BiasType.BEARISH and pattern.direction == Direction.BEARISH
+        ) or (bias == BiasType.BULLISH and pattern.direction == Direction.BULLISH)
         if bias_match:
             score += 1
 
@@ -79,7 +82,7 @@ class SignalGenerator:
 
     def is_killzone_active(self, timestamp: datetime) -> bool:
         """Check if timestamp falls within any of this pair's active killzones."""
-        hour   = timestamp.hour
+        hour = timestamp.hour
         minute = timestamp.minute
 
         for kz_name in self.config.killzones:
@@ -87,7 +90,7 @@ class SignalGenerator:
                 continue
             sh, sm, eh, em = KILLZONE_WINDOWS[kz_name]
             start_mins = sh * 60 + sm
-            end_mins   = eh * 60 + em
+            end_mins = eh * 60 + em
             current_mins = hour * 60 + minute
             if start_mins <= current_mins <= end_mins:
                 return True
@@ -134,13 +137,13 @@ class SignalGenerator:
         # SL: beyond sweep wick
         sl_buffer = self.config.sweep_wick_pips * self.config.pip_size * 1.5
         if pattern.direction == Direction.BEARISH:
-            stop_loss   = pattern.sweep_level + sl_buffer
+            stop_loss = pattern.sweep_level + sl_buffer
             # TP: 2× risk below entry (minimum; trader manages manually)
-            risk        = stop_loss - entry_price
+            risk = stop_loss - entry_price
             take_profit = entry_price - (risk * 2)
         else:
-            stop_loss   = pattern.sweep_level - sl_buffer
-            risk        = entry_price - stop_loss
+            stop_loss = pattern.sweep_level - sl_buffer
+            risk = entry_price - stop_loss
             take_profit = entry_price + (risk * 2)
 
         if risk <= 0:

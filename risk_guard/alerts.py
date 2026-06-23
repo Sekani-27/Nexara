@@ -8,11 +8,11 @@ import logging
 import os
 from typing import Optional
 
-from .models import Decision, DecisionStatus
+from .models import Decision
 
 log = logging.getLogger(__name__)
 
-_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN")
+_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 _CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 _DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -21,6 +21,7 @@ _DIV = "━━━━━━━━━━━━━━━━━━━━━━━━
 # ─────────────────────────────────────────────────────────────────────────────
 # FORMATTERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def format_clear(signal_text: str, decision: Decision) -> str:
     """Append account-state footer to a confirmed signal alert."""
@@ -42,9 +43,7 @@ def format_warn(signal_text: str, decision: Decision) -> str:
     """Prepend warning + adjusted size to a signal that passed with caveats."""
     adjusted_line = ""
     if decision.adjusted_risk_dollars is not None:
-        adjusted_line = (
-            f"  Adjusted Risk: ${decision.adjusted_risk_dollars:>10,.2f}\n"
-        )
+        adjusted_line = f"  Adjusted Risk: ${decision.adjusted_risk_dollars:>10,.2f}\n"
 
     return (
         f"⚠️  Risk Guard  [WARN]\n"
@@ -85,6 +84,7 @@ def format_block(decision: Decision) -> str:
 # DISPATCH
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def send_rg_alert(
     text: str,
     token: Optional[str] = None,
@@ -99,13 +99,14 @@ async def send_rg_alert(
 
     Silent no-op if neither source supplies both credentials.
     """
-    _tok = token   or _TOKEN
+    _tok = token or _TOKEN
     _cid = chat_id or _CHAT_ID
     if not (_tok and _cid):
         log.debug("Telegram not configured — RG alert skipped.")
         return
     try:
         from telegram import Bot
+
         async with Bot(token=_tok) as bot:
             await bot.send_message(chat_id=_cid, text=text)
         log.debug("RG alert sent (%d chars)", len(text))

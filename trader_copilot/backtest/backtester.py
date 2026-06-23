@@ -11,13 +11,14 @@ Usage:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Dict
 import os
 import sys
 
 # Allow running standalone
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from trader_copilot.core.structures import TradeSignal, Direction
 from trader_copilot.engine import TraderCopilot
@@ -48,11 +49,11 @@ class BacktestResult:
 class Backtester:
 
     def __init__(self, symbol: str, journal_db: str = None):
-        self.symbol  = symbol
-        self.config  = PAIR_CONFIGS[symbol]
-        self.engine  = TraderCopilot(symbol=symbol, log_path=None, backtest_mode=True)
+        self.symbol = symbol
+        self.config = PAIR_CONFIGS[symbol]
+        self.engine = TraderCopilot(symbol=symbol, log_path=None, backtest_mode=True)
         self.journal = TradeJournal(journal_db or f"{symbol}_backtest.db")
-        self.csv     = CSVConnector()
+        self.csv = CSVConnector()
 
     # ─────────────────────────────────────────────
     # MAIN RUN
@@ -62,8 +63,8 @@ class Backtester:
         self,
         htf_csv: str,
         ltf_csv: str,
-        htf_window: int = 200,   # How many HTF candles to feed per bar
-        ltf_window: int = 200,   # How many LTF candles to feed per bar
+        htf_window: int = 200,  # How many HTF candles to feed per bar
+        ltf_window: int = 200,  # How many LTF candles to feed per bar
         min_score: int = 3,
     ) -> BacktestResult:
         """
@@ -73,7 +74,7 @@ class Backtester:
         """
         print(f"\n── Backtesting {self.symbol} ──")
         print(f"HTF: {self.config.structure_tf} | LTF: {self.config.entry_tf}")
-        print(f"Loading data...")
+        print("Loading data...")
 
         candles_htf = self.csv.load(htf_csv, timeframe=self.config.structure_tf)
         candles_ltf = self.csv.load(ltf_csv, timeframe=self.config.entry_tf)
@@ -85,11 +86,11 @@ class Backtester:
         print(f"HTF candles: {len(candles_htf)} | LTF candles: {len(candles_ltf)}")
 
         signals_fired = []
-        seen_signals  = set()   # Deduplicate signals at the same level
+        seen_signals = set()  # Deduplicate signals at the same level
 
         # Walk forward bar by bar on LTF
         for i in range(ltf_window, len(candles_ltf)):
-            ltf_slice = candles_ltf[max(0, i - ltf_window): i]
+            ltf_slice = candles_ltf[max(0, i - ltf_window) : i]
 
             # Align HTF candles to current LTF timestamp
             current_time = candles_ltf[i - 1].timestamp
@@ -117,8 +118,7 @@ class Backtester:
 
             # Simulate outcome on future LTF candles
             outcome, close_price = self._simulate_outcome(
-                signal=signal,
-                future_candles=candles_ltf[i:]
+                signal=signal, future_candles=candles_ltf[i:]
             )
 
             self.journal.record_outcome(
@@ -131,32 +131,44 @@ class Backtester:
             # Calculate P&L in R
             risk = abs(signal.entry_price - signal.stop_loss)
             if signal.direction == Direction.BEARISH:
-                pnl_r = round((signal.entry_price - close_price) / risk, 2) if risk > 0 else 0
+                pnl_r = (
+                    round((signal.entry_price - close_price) / risk, 2)
+                    if risk > 0
+                    else 0
+                )
             else:
-                pnl_r = round((close_price - signal.entry_price) / risk, 2) if risk > 0 else 0
+                pnl_r = (
+                    round((close_price - signal.entry_price) / risk, 2)
+                    if risk > 0
+                    else 0
+                )
 
-            signals_fired.append({
-                "id":         trade_id,
-                "symbol":     signal.symbol,
-                "direction":  signal.direction.value,
-                "pattern":    signal.pattern,
-                "entry":      signal.entry_price,
-                "sl":         signal.stop_loss,
-                "tp":         signal.take_profit,
-                "rr":         signal.risk_reward,
-                "score":      signal.confluence_score,
-                "fvg":        signal.fvg_present,
-                "ob":         signal.ob_present,
-                "killzone":   signal.killzone_active,
-                "time":       signal.timestamp.isoformat(),
-                "outcome":    outcome.value,
-                "close":      close_price,
-                "pnl_r":      pnl_r,
-            })
+            signals_fired.append(
+                {
+                    "id": trade_id,
+                    "symbol": signal.symbol,
+                    "direction": signal.direction.value,
+                    "pattern": signal.pattern,
+                    "entry": signal.entry_price,
+                    "sl": signal.stop_loss,
+                    "tp": signal.take_profit,
+                    "rr": signal.risk_reward,
+                    "score": signal.confluence_score,
+                    "fvg": signal.fvg_present,
+                    "ob": signal.ob_present,
+                    "killzone": signal.killzone_active,
+                    "time": signal.timestamp.isoformat(),
+                    "outcome": outcome.value,
+                    "close": close_price,
+                    "pnl_r": pnl_r,
+                }
+            )
 
-            print(f"  Signal {len(signals_fired):>3} | {signal.pattern:<28} | "
-                  f"Score: {signal.confluence_score}/5 | "
-                  f"{outcome.value:<12} | {pnl_r:+.2f}R")
+            print(
+                f"  Signal {len(signals_fired):>3} | {signal.pattern:<28} | "
+                f"Score: {signal.confluence_score}/5 | "
+                f"{outcome.value:<12} | {pnl_r:+.2f}R"
+            )
 
         return self._compile_results(signals_fired)
 
@@ -189,7 +201,7 @@ class Backtester:
 
         # Neither hit — close at last available price
         last_price = future_candles[min(max_bars - 1, len(future_candles) - 1)].close
-        risk = abs(signal.entry_price - signal.stop_loss)
+        _risk = abs(signal.entry_price - signal.stop_loss)
         if signal.direction == Direction.BEARISH:
             pnl = signal.entry_price - last_price
         else:
@@ -209,24 +221,32 @@ class Backtester:
         if not signals:
             print("\nNo signals fired during backtest period.")
             return BacktestResult(
-                symbol=self.symbol, total_signals=0, wins=0, losses=0,
-                breakeven=0, win_rate=0, avg_rr=0, total_r=0,
-                max_drawdown_r=0, best_trade_r=0, worst_trade_r=0
+                symbol=self.symbol,
+                total_signals=0,
+                wins=0,
+                losses=0,
+                breakeven=0,
+                win_rate=0,
+                avg_rr=0,
+                total_r=0,
+                max_drawdown_r=0,
+                best_trade_r=0,
+                worst_trade_r=0,
             )
 
-        wins      = [s for s in signals if s["outcome"] in ("tp_hit", "manual_win")]
-        losses    = [s for s in signals if s["outcome"] in ("sl_hit", "manual_loss")]
+        wins = [s for s in signals if s["outcome"] in ("tp_hit", "manual_win")]
+        losses = [s for s in signals if s["outcome"] in ("sl_hit", "manual_loss")]
         breakeven = [s for s in signals if s["outcome"] == "breakeven"]
 
-        total     = len(signals)
-        win_rate  = round(len(wins) / total * 100, 1)
-        pnl_list  = [s["pnl_r"] for s in signals]
-        avg_rr    = round(sum(pnl_list) / total, 2)
-        total_r   = round(sum(pnl_list), 2)
+        total = len(signals)
+        win_rate = round(len(wins) / total * 100, 1)
+        pnl_list = [s["pnl_r"] for s in signals]
+        avg_rr = round(sum(pnl_list) / total, 2)
+        total_r = round(sum(pnl_list), 2)
 
         # Max drawdown
         equity = 0
-        peak   = 0
+        peak = 0
         max_dd = 0
         for p in pnl_list:
             equity += p
@@ -236,8 +256,8 @@ class Backtester:
 
         # Breakdowns
         by_pattern = {}
-        by_score   = {}
-        by_session = {}
+        by_score = {}
+        _by_session = {}
 
         for s in signals:
             # Pattern
@@ -258,11 +278,19 @@ class Backtester:
 
         # Win rates
         for p in by_pattern:
-            by_pattern[p]["win_rate"] = round(by_pattern[p]["wins"] / by_pattern[p]["total"] * 100, 1)
-            by_pattern[p]["avg_r"]    = round(by_pattern[p]["total_r"] / by_pattern[p]["total"], 2)
+            by_pattern[p]["win_rate"] = round(
+                by_pattern[p]["wins"] / by_pattern[p]["total"] * 100, 1
+            )
+            by_pattern[p]["avg_r"] = round(
+                by_pattern[p]["total_r"] / by_pattern[p]["total"], 2
+            )
         for sc in by_score:
-            by_score[sc]["win_rate"] = round(by_score[sc]["wins"] / by_score[sc]["total"] * 100, 1)
-            by_score[sc]["avg_r"]    = round(by_score[sc]["total_r"] / by_score[sc]["total"], 2)
+            by_score[sc]["win_rate"] = round(
+                by_score[sc]["wins"] / by_score[sc]["total"] * 100, 1
+            )
+            by_score[sc]["avg_r"] = round(
+                by_score[sc]["total_r"] / by_score[sc]["total"], 2
+            )
 
         return BacktestResult(
             symbol=self.symbol,
@@ -290,7 +318,8 @@ class Backtester:
             print("No results to report.")
             return
 
-        print(f"""
+        print(
+            f"""
 ╔══════════════════════════════════════════════╗
   TRADER COPILOT — BACKTEST REPORT
   {result.symbol}
@@ -307,23 +336,29 @@ class Backtester:
   Best trade      : +{result.best_trade_r:.2f}R
   Worst trade     : {result.worst_trade_r:.2f}R
 
-── By Pattern ──────────────────────────────────""")
+── By Pattern ──────────────────────────────────"""
+        )
 
         for pattern, stats in result.by_pattern.items():
-            print(f"  {pattern:<30} WR: {stats['win_rate']:>5}%  "
-                  f"Trades: {stats['total']:>3}  Avg: {stats['avg_r']:+.2f}R")
+            print(
+                f"  {pattern:<30} WR: {stats['win_rate']:>5}%  "
+                f"Trades: {stats['total']:>3}  Avg: {stats['avg_r']:+.2f}R"
+            )
 
         print("\n── By Confluence Score ─────────────────────────")
         for score, stats in sorted(result.by_score.items()):
             bar = "█" * stats["total"]
-            print(f"  Score {score}/5  WR: {stats['win_rate']:>5}%  "
-                  f"Trades: {stats['total']:>3}  Avg: {stats['avg_r']:+.2f}R  {bar}")
+            print(
+                f"  Score {score}/5  WR: {stats['win_rate']:>5}%  "
+                f"Trades: {stats['total']:>3}  Avg: {stats['avg_r']:+.2f}R  {bar}"
+            )
 
         print(f"\n{'═' * 48}")
 
     def export_report_csv(self, result: BacktestResult, filepath: str):
         """Export signal-level detail to CSV."""
         import csv
+
         if not result or not result.signals:
             return
         with open(filepath, "w", newline="") as f:

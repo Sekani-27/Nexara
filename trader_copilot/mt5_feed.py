@@ -34,6 +34,7 @@ from typing import Dict, List, Optional, Tuple
 try:
     from telegram_bot import send_alert as _tg_send_alert
     from telegram_bot import send_startup_message as _tg_send_startup
+
     _TG_AVAILABLE = True
 except ImportError:
     _TG_AVAILABLE = False
@@ -47,15 +48,20 @@ logging.basicConfig(
 logger = logging.getLogger("trader_copilot.mt5_feed")
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-POLL_INTERVAL_SECONDS  = 30    # How often to check for new closed candles
-CANDLE_COUNT           = 300   # Candles to fetch per request
-MAX_RECONNECT_ATTEMPTS = 5     # MT5 reconnect attempts before giving up
-RECONNECT_BASE_DELAY   = 10    # Seconds — exponential backoff base
-MEMORY_TOP_K           = 3     # Qdrant similar setups to attach to each alert
+POLL_INTERVAL_SECONDS = 30  # How often to check for new closed candles
+CANDLE_COUNT = 300  # Candles to fetch per request
+MAX_RECONNECT_ATTEMPTS = 5  # MT5 reconnect attempts before giving up
+RECONNECT_BASE_DELAY = 10  # Seconds — exponential backoff base
+MEMORY_TOP_K = 3  # Qdrant similar setups to attach to each alert
 
 # Timeframe durations (minutes) — used for closed-candle detection
 TF_MINUTES: Dict[str, int] = {
-    "5M": 5, "15M": 15, "30M": 30, "1H": 60, "4H": 240, "D": 1440,
+    "5M": 5,
+    "15M": 15,
+    "30M": 30,
+    "1H": 60,
+    "4H": 240,
+    "D": 1440,
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,11 +70,22 @@ TF_MINUTES: Dict[str, int] = {
 
 # Clean user-facing symbol names requested for this feed
 WATCH_SYMBOLS: List[str] = [
-    "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "NZDUSD",
-    "AUDNZD", "CADJPY", "AUDCAD", "GBPCAD",
-    "EURNZD", "EURAUD",
+    "EURUSD",
+    "GBPUSD",
+    "USDCAD",
+    "USDJPY",
+    "NZDUSD",
+    "AUDNZD",
+    "CADJPY",
+    "AUDCAD",
+    "GBPCAD",
+    "EURNZD",
+    "EURAUD",
     "XAUUSD",
-    "US30", "US100", "US500", "GER40",
+    "US30",
+    "US100",
+    "US500",
+    "GER40",
 ]
 
 # Pipeline type per clean symbol.
@@ -86,11 +103,11 @@ PIPELINE: Dict[str, str] = {
     "GBPCAD": "currency_30m",
     "EURNZD": "currency_30m",
     "EURAUD": "currency_30m",
-    "XAUUSD": "htf_ltf",      # 4H structure + 15M entry (per PairConfig)
-    "US30":   "currency_30m",
-    "US100":  "currency_30m",
-    "US500":  "currency_30m",
-    "GER40":  "currency_30m",
+    "XAUUSD": "htf_ltf",  # 4H structure + 15M entry (per PairConfig)
+    "US30": "currency_30m",
+    "US100": "currency_30m",
+    "US500": "currency_30m",
+    "GER40": "currency_30m",
 }
 
 # Maps clean name → existing PAIR_CONFIGS key (broker-suffixed)
@@ -114,6 +131,7 @@ EXISTING_CONFIG_MAP: Dict[str, str] = {
 # INJECT MISSING PAIR CONFIGS
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def inject_missing_configs(suffix: str) -> None:
     """
     Adds PairConfig entries for symbols absent from config/pairs.py into
@@ -128,50 +146,68 @@ def inject_missing_configs(suffix: str) -> None:
         # AUD/NZD — Pacific cross, similar tolerances to EURNZD
         f"AUDNZD{suffix}": dict(
             symbol=f"AUDNZD{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["london", "sydney"],
-            sweep_wick_pips=3.0, fvg_min_pips=2.0,
-            peak_equality_pips=5.0, pip_size=0.0001,
+            sweep_wick_pips=3.0,
+            fvg_min_pips=2.0,
+            peak_equality_pips=5.0,
+            pip_size=0.0001,
         ),
         # AUD/CAD — similar to GBPCAD
         f"AUDCAD{suffix}": dict(
             symbol=f"AUDCAD{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["london", "sydney"],
-            sweep_wick_pips=3.0, fvg_min_pips=2.0,
-            peak_equality_pips=5.0, pip_size=0.0001,
+            sweep_wick_pips=3.0,
+            fvg_min_pips=2.0,
+            peak_equality_pips=5.0,
+            pip_size=0.0001,
         ),
         # US30 (Dow Jones) — index, quoted in dollars
         f"US30{suffix}": dict(
             symbol=f"US30{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["new_york", "new_york_open"],
-            sweep_wick_pips=15.0, fvg_min_pips=8.0,
-            peak_equality_pips=20.0, pip_size=1.0,
+            sweep_wick_pips=15.0,
+            fvg_min_pips=8.0,
+            peak_equality_pips=20.0,
+            pip_size=1.0,
         ),
         # US100 (Nasdaq 100) — index
         f"US100{suffix}": dict(
             symbol=f"US100{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["new_york", "new_york_open"],
-            sweep_wick_pips=20.0, fvg_min_pips=10.0,
-            peak_equality_pips=30.0, pip_size=1.0,
+            sweep_wick_pips=20.0,
+            fvg_min_pips=10.0,
+            peak_equality_pips=30.0,
+            pip_size=1.0,
         ),
         # US500 (S&P 500) — index
         f"US500{suffix}": dict(
             symbol=f"US500{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["new_york", "new_york_open"],
-            sweep_wick_pips=5.0, fvg_min_pips=3.0,
-            peak_equality_pips=8.0, pip_size=0.1,
+            sweep_wick_pips=5.0,
+            fvg_min_pips=3.0,
+            peak_equality_pips=8.0,
+            pip_size=0.1,
         ),
         # GER40 (DAX) — European index
         f"GER40{suffix}": dict(
             symbol=f"GER40{suffix}",
-            structure_tf="30M", entry_tf="5M",
+            structure_tf="30M",
+            entry_tf="5M",
             killzones=["london", "london_open"],
-            sweep_wick_pips=15.0, fvg_min_pips=8.0,
-            peak_equality_pips=20.0, pip_size=1.0,
+            sweep_wick_pips=15.0,
+            fvg_min_pips=8.0,
+            peak_equality_pips=20.0,
+            pip_size=1.0,
         ),
     }
 
@@ -185,6 +221,7 @@ def inject_missing_configs(suffix: str) -> None:
 # CLOSED CANDLE DETECTION
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def current_candle_open_time(tf: str, now: Optional[datetime] = None) -> datetime:
     """
     Returns the UTC open time of the candle currently forming on `tf`.
@@ -192,7 +229,7 @@ def current_candle_open_time(tf: str, now: Optional[datetime] = None) -> datetim
     """
     now = now or datetime.now(timezone.utc)
     tf_secs = TF_MINUTES[tf] * 60
-    epoch   = int(now.timestamp())
+    epoch = int(now.timestamp())
     period_start = (epoch // tf_secs) * tf_secs
     return datetime.fromtimestamp(period_start, tz=timezone.utc)
 
@@ -230,6 +267,7 @@ class ClosedCandleTracker:
 # DUPLICATE ALERT SUPPRESSION  (same pattern as run_multi.py)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class AlertTracker:
     """Suppresses re-alerting the same entry price for TTL cycles."""
 
@@ -258,6 +296,7 @@ class AlertTracker:
 # MT5 RECONNECT LOGIC
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def try_connect(
     connector,
     max_attempts: int = MAX_RECONNECT_ATTEMPTS,
@@ -272,7 +311,7 @@ def try_connect(
         if connector.connect():
             logger.info("[MT5] Connected successfully.")
             return True
-        delay = base_delay * (2 ** (attempt - 1))   # 10s, 20s, 40s, 80s, 160s
+        delay = base_delay * (2 ** (attempt - 1))  # 10s, 20s, 40s, 80s, 160s
         logger.warning(f"[MT5] Connection failed. Retrying in {delay:.0f}s …")
         time.sleep(delay)
     logger.error("[MT5] All reconnect attempts exhausted. Feed stopping.")
@@ -286,6 +325,7 @@ def ensure_connected(connector) -> bool:
     """
     try:
         import MetaTrader5 as mt5
+
         info = mt5.terminal_info()
         if info is not None:
             return True
@@ -301,18 +341,24 @@ def ensure_connected(connector) -> bool:
 # TRADE MEMORY ENRICHMENT
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _active_session(now_utc: datetime) -> str:
     """
     Returns the name of the trading session active at *now_utc*.
     Mirrors the killzone windows in config/pairs.py.
     """
     h, m = now_utc.hour, now_utc.minute
-    t = h * 60 + m   # minutes since midnight UTC
-    if   7 * 60 <= t < 10 * 60:  return "london"
-    elif 12 * 60 <= t < 16 * 60: return "new_york"
-    elif 0 * 60 <= t <  3 * 60:  return "tokyo"
-    elif 22 * 60 <= t <= 24 * 60: return "sydney"
-    else:                          return "off_hours"
+    t = h * 60 + m  # minutes since midnight UTC
+    if 7 * 60 <= t < 10 * 60:
+        return "london"
+    elif 12 * 60 <= t < 16 * 60:
+        return "new_york"
+    elif 0 * 60 <= t < 3 * 60:
+        return "tokyo"
+    elif 22 * 60 <= t <= 24 * 60:
+        return "sydney"
+    else:
+        return "off_hours"
 
 
 def build_memory_query(signal, clean_symbol: str) -> str:
@@ -323,9 +369,12 @@ def build_memory_query(signal, clean_symbol: str) -> str:
     """
     session = _active_session(signal.timestamp)
     confluences = []
-    if signal.fvg_present:      confluences.append("fvg")
-    if signal.ob_present:       confluences.append("order block")
-    if signal.killzone_active:  confluences.append("killzone")
+    if signal.fvg_present:
+        confluences.append("fvg")
+    if signal.ob_present:
+        confluences.append("order block")
+    if signal.killzone_active:
+        confluences.append("killzone")
 
     return (
         f"{clean_symbol} {signal.direction.value} on {signal.timeframe} "
@@ -352,11 +401,13 @@ def fetch_similar_setups(
         return None
     try:
         from trader_copilot.retrieve_similar import retrieve_similar
+
         results = retrieve_similar(query, top_k=MEMORY_TOP_K, regime=regime)
         logger.info(
-            "[memory] retrieve_similar returned %d result(s) "
-            "(regime_filter=%s): %s",
-            len(results) if results else 0, regime, results
+            "[memory] retrieve_similar returned %d result(s) " "(regime_filter=%s): %s",
+            len(results) if results else 0,
+            regime,
+            results,
         )
         return results
     except Exception:
@@ -377,19 +428,21 @@ def format_memory_block(matches: Optional[List[dict]]) -> str:
         "  ── Similar historical setups ──────────────────────",
     ]
     for i, m in enumerate(matches, start=1):
-        sid    = m.get("setup_id", "?")
-        instr  = m.get("instrument", "?").upper()
-        dir_   = m.get("direction", "?")
-        out    = m.get("outcome", "?")
-        grade  = m.get("quality_grade", "?")
-        score  = m.get("similarity_score", 0.0)
-        notes  = m.get("vision_notes", "")
+        sid = m.get("setup_id", "?")
+        instr = m.get("instrument", "?").upper()
+        dir_ = m.get("direction", "?")
+        out = m.get("outcome", "?")
+        grade = m.get("quality_grade", "?")
+        score = m.get("similarity_score", 0.0)
+        notes = m.get("vision_notes", "")
 
         # Truncate long notes for terminal readability
         if len(notes) > 100:
             notes = notes[:97] + "…"
 
-        lines.append(f"  #{i}  [{sid}]  {instr} {dir_}  |  outcome={out}  grade={grade}  sim={score:.3f}")
+        lines.append(
+            f"  #{i}  [{sid}]  {instr} {dir_}  |  outcome={out}  grade={grade}  sim={score:.3f}"
+        )
         lines.append(f"       {notes}")
 
     lines.append("─" * 48)
@@ -400,7 +453,10 @@ def format_memory_block(matches: Optional[List[dict]]) -> str:
 # CANDLE FETCHING  (closed-only, excludes the currently forming bar)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_closed_candles(connector, broker_symbol: str, tf: str, count: int = CANDLE_COUNT):
+
+def get_closed_candles(
+    connector, broker_symbol: str, tf: str, count: int = CANDLE_COUNT
+):
     """
     Fetches candles from MT5 and strips the currently forming bar.
 
@@ -426,7 +482,7 @@ def get_closed_candles(connector, broker_symbol: str, tf: str, count: int = CAND
     forming_ts = forming_open.replace(tzinfo=timezone.utc)
 
     if last_ts >= forming_ts:
-        candles = candles[:-1]   # drop the still-open bar
+        candles = candles[:-1]  # drop the still-open bar
 
     return candles
 
@@ -434,6 +490,7 @@ def get_closed_candles(connector, broker_symbol: str, tf: str, count: int = CAND
 # ─────────────────────────────────────────────────────────────────────────────
 # TELEGRAM ALERT HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _score_to_confidence(confluence_score: float) -> int:
     """
@@ -451,9 +508,17 @@ def _memory_summary(similar_setups: Optional[List[dict]]) -> str:
     if not similar_setups:
         return "No similar setups in memory."
 
-    wins   = sum(1 for m in similar_setups if str(m.get("outcome", "")).lower() in ("win", "w", "tp"))
-    losses = sum(1 for m in similar_setups if str(m.get("outcome", "")).lower() in ("loss", "l", "sl"))
-    total  = len(similar_setups)
+    wins = sum(
+        1
+        for m in similar_setups
+        if str(m.get("outcome", "")).lower() in ("win", "w", "tp")
+    )
+    losses = sum(
+        1
+        for m in similar_setups
+        if str(m.get("outcome", "")).lower() in ("loss", "l", "sl")
+    )
+    total = len(similar_setups)
     wl_str = f"{wins}W {losses}L" if (wins + losses) else f"{total} results"
 
     # Pull notes from the closest (first) match
@@ -475,10 +540,10 @@ def _build_telegram_alert_dict(
     expected by telegram_bot.send_alert().
     """
     entry = float(signal.entry_price)
-    sl    = float(signal.stop_loss)
-    tp    = float(signal.take_profit)
+    sl = float(signal.stop_loss)
+    tp = float(signal.take_profit)
 
-    risk   = abs(sl - entry)
+    risk = abs(sl - entry)
     reward = abs(tp - entry)
     if risk <= 0:
         rr_str = "—"
@@ -487,7 +552,7 @@ def _build_telegram_alert_dict(
         if rr > 5.0:
             # Suspiciously wide R:R — cap display and flag for manual review.
             # Root cause is usually a near-zero SL on an index instrument.
-            rr_str = f">5.0 ⚠️ check SL manually"
+            rr_str = ">5.0 ⚠️ check SL manually"
         else:
             rr_str = f"{rr:.1f}"
 
@@ -497,17 +562,17 @@ def _build_telegram_alert_dict(
     pattern_fmt = signal.pattern.replace("_", " ").title() if signal.pattern else "—"
 
     return {
-        "symbol":     clean_symbol,
-        "direction":  signal.direction.value.upper(),
-        "pattern":    pattern_fmt,
-        "session":    session_fmt,
+        "symbol": clean_symbol,
+        "direction": signal.direction.value.upper(),
+        "pattern": pattern_fmt,
+        "session": session_fmt,
         "confidence": _score_to_confidence(signal.confluence_score),
-        "entry":      entry,
-        "stop_loss":  sl,
+        "entry": entry,
+        "stop_loss": sl,
         "take_profit": tp,
-        "rr":         rr_str,
-        "why":        signal.notes or "—",
-        "memory":     _memory_summary(similar_setups),
+        "rr": rr_str,
+        "why": signal.notes or "—",
+        "memory": _memory_summary(similar_setups),
         # news_warning intentionally omitted — add if you integrate a news feed
     }
 
@@ -536,15 +601,16 @@ def _fire_telegram_startup(symbols: List[str]) -> None:
 # PER-SYMBOL SCAN
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def scan_symbol(
-    clean_symbol:   str,
-    broker_symbol:  str,
+    clean_symbol: str,
+    broker_symbol: str,
     engine,
     connector,
-    pipeline:       str,
+    pipeline: str,
     candle_tracker: ClosedCandleTracker,
-    alert_tracker:  AlertTracker,
-    use_memory:     bool,
+    alert_tracker: AlertTracker,
+    use_memory: bool,
 ) -> bool:
     """
     Runs one scan cycle for a single symbol:
@@ -559,7 +625,7 @@ def scan_symbol(
     if pipeline == "htf_ltf":
         # XAUUSD: trigger on new 15M candle; always fetch fresh 4H too
         trigger_tf = "15M"
-        htf_tf     = "4H"
+        htf_tf = "4H"
     else:
         trigger_tf = "30M"
 
@@ -575,7 +641,7 @@ def scan_symbol(
 
     # ── New-candle gate: only process each closed candle once ─────────────────
     if not candle_tracker.is_new(clean_symbol, trigger_tf, last_closed_open):
-        return False   # This candle was already processed — wait for the next one
+        return False  # This candle was already processed — wait for the next one
 
     candle_tracker.mark(clean_symbol, trigger_tf, last_closed_open)
     logger.info(
@@ -611,8 +677,12 @@ def scan_symbol(
         return False
 
     # ── Duplicate suppression ─────────────────────────────────────────────────
-    if alert_tracker.is_duplicate(clean_symbol, signal.direction.value, signal.entry_price):
-        logger.info(f"[{clean_symbol}] Duplicate alert suppressed ({signal.direction.value} @ {signal.entry_price:.5f})")
+    if alert_tracker.is_duplicate(
+        clean_symbol, signal.direction.value, signal.entry_price
+    ):
+        logger.info(
+            f"[{clean_symbol}] Duplicate alert suppressed ({signal.direction.value} @ {signal.entry_price:.5f})"
+        )
         return False
 
     alert_tracker.register(clean_symbol, signal.direction.value, signal.entry_price)
@@ -620,9 +690,9 @@ def scan_symbol(
     # ── Trade memory enrichment ───────────────────────────────────────────────
     # regime="trending" is safe here: the engine regime gate already blocks
     # any signal that originates from a ranging / choppy structure.
-    memory_query   = build_memory_query(signal, clean_symbol)
+    memory_query = build_memory_query(signal, clean_symbol)
     similar_setups = fetch_similar_setups(memory_query, use_memory, regime="trending")
-    memory_block   = format_memory_block(similar_setups)
+    memory_block = format_memory_block(similar_setups)
 
     # ── Dispatch alert ────────────────────────────────────────────────────────
     engine.alert(signal)
@@ -647,12 +717,13 @@ def scan_symbol(
 # MAIN FEED LOOP
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def run(
-    symbols:    List[str],
-    suffix:     str,
-    login:      Optional[int],
-    password:   Optional[str],
-    server:     Optional[str],
+    symbols: List[str],
+    suffix: str,
+    login: Optional[int],
+    password: Optional[str],
+    server: Optional[str],
     use_memory: bool,
 ) -> None:
     from trader_copilot.engine import TraderCopilot
@@ -692,23 +763,25 @@ def run(
         bname = broker_name[sym]
         engines[sym] = TraderCopilot(
             symbol=bname,
-            webhook_urls=None,            # Terminal output only for now
+            webhook_urls=None,  # Terminal output only for now
             log_path=f"{sym}_alerts.jsonl",
         )
-        logger.info(
-            f"  {sym:10s} → broker={bname:14s}  pipeline={PIPELINE[sym]}"
-        )
+        logger.info(f"  {sym:10s} → broker={bname:14s}  pipeline={PIPELINE[sym]}")
 
     candle_tracker = ClosedCandleTracker()
-    alert_tracker  = AlertTracker(ttl_cycles=8)
+    alert_tracker = AlertTracker(ttl_cycles=8)
 
     # ── 5. Print startup banner ───────────────────────────────────────────────
     logger.info("═" * 60)
     logger.info("  Trader Copilot — Live MT5 Feed")
     logger.info(f"  Symbols   : {', '.join(symbols)}")
     logger.info(f"  Suffix    : '{suffix}' (broker symbol suffix)")
-    logger.info(f"  Poll      : every {POLL_INTERVAL_SECONDS}s (triggers on closed candle)")
-    logger.info(f"  Memory    : {'Qdrant (top ' + str(MEMORY_TOP_K) + ' similar setups)' if use_memory else 'disabled'}")
+    logger.info(
+        f"  Poll      : every {POLL_INTERVAL_SECONDS}s (triggers on closed candle)"
+    )
+    logger.info(
+        f"  Memory    : {'Qdrant (top ' + str(MEMORY_TOP_K) + ' similar setups)' if use_memory else 'disabled'}"
+    )
     logger.info("═" * 60)
 
     # ── Telegram startup announcement ─────────────────────────────────────────
@@ -766,6 +839,7 @@ def run(
 # CLI
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -776,7 +850,8 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--symbols", nargs="+",
+        "--symbols",
+        nargs="+",
         default=WATCH_SYMBOLS,
         choices=WATCH_SYMBOLS,
         metavar="SYMBOL",
@@ -786,26 +861,33 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--suffix", default="m",
+        "--suffix",
+        default="m",
         help=(
             "Broker symbol suffix appended to build the MT5 name "
             "(default: 'm' for Exness demo, use '' for live or other brokers)."
         ),
     )
     parser.add_argument(
-        "--login", type=int, default=None,
+        "--login",
+        type=int,
+        default=None,
         help="MT5 account number (leave blank to use the already-logged-in terminal).",
     )
     parser.add_argument(
-        "--password", default=None,
+        "--password",
+        default=None,
         help="MT5 account password.",
     )
     parser.add_argument(
-        "--server", default=None,
+        "--server",
+        default=None,
         help="MT5 broker server name (e.g. 'Exness-MT5Real').",
     )
     parser.add_argument(
-        "--no-memory", action="store_true", dest="no_memory",
+        "--no-memory",
+        action="store_true",
+        dest="no_memory",
         help=(
             "Disable Qdrant trade-memory enrichment. "
             "Use this if Qdrant is not running or trade_memory hasn't been ingested yet."

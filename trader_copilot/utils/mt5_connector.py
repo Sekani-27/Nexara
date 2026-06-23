@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 # printing the same "not installed" message hundreds of times per cycle.
 try:
     import MetaTrader5 as _mt5_module
+
     _MT5_AVAILABLE = True
 except ImportError:
     _mt5_module = None
@@ -36,13 +37,13 @@ except ImportError:
 
 
 TF_MAP = {
-    "1M":  1,
-    "5M":  5,
+    "1M": 1,
+    "5M": 5,
     "15M": 15,
     "30M": 30,
-    "1H":  60,
-    "4H":  240,
-    "D":   1440,
+    "1H": 60,
+    "4H": 240,
+    "D": 1440,
 }
 
 
@@ -59,13 +60,17 @@ class MT5Connector:
     pairs at high frequency.
     """
 
-    def __init__(self, login: Optional[int] = None, password: Optional[str] = None,
-                 server: Optional[str] = None):
+    def __init__(
+        self,
+        login: Optional[int] = None,
+        password: Optional[str] = None,
+        server: Optional[str] = None,
+    ):
         self._connected = False
-        self._mt5 = None          # module reference cached after first successful import
-        self.login    = login
+        self._mt5 = None  # module reference cached after first successful import
+        self.login = login
         self.password = password
-        self.server   = server
+        self.server = server
 
     # ── Connection lifecycle ──────────────────────────────────────────────────
 
@@ -75,11 +80,13 @@ class MT5Connector:
         if self._connected:
             return True
         if not _MT5_AVAILABLE:
-            return False   # already warned at import time — no repeat message
+            return False  # already warned at import time — no repeat message
         try:
             self._mt5 = _mt5_module
             if self.login:
-                ok = _mt5_module.initialize(login=self.login, password=self.password, server=self.server)
+                ok = _mt5_module.initialize(
+                    login=self.login, password=self.password, server=self.server
+                )
             else:
                 ok = _mt5_module.initialize()
             self._connected = ok
@@ -115,7 +122,9 @@ class MT5Connector:
             return self.connect()
         return True
 
-    def get_candles(self, symbol: str, timeframe: str, count: int = 300) -> List[Candle]:
+    def get_candles(
+        self, symbol: str, timeframe: str, count: int = 300
+    ) -> List[Candle]:
         """
         Fetch the last `count` candles for symbol on the given timeframe.
         Returns List[Candle] ready for the TraderCopilot engine.
@@ -145,20 +154,22 @@ class MT5Connector:
 
             candles = []
             for r in rates:
-                candles.append(Candle(
-                    timestamp=datetime.utcfromtimestamp(r["time"]),
-                    open=float(r["open"]),
-                    high=float(r["high"]),
-                    low=float(r["low"]),
-                    close=float(r["close"]),
-                    volume=float(r["tick_volume"]),
-                    timeframe=timeframe,
-                ))
+                candles.append(
+                    Candle(
+                        timestamp=datetime.utcfromtimestamp(r["time"]),
+                        open=float(r["open"]),
+                        high=float(r["high"]),
+                        low=float(r["low"]),
+                        close=float(r["close"]),
+                        volume=float(r["tick_volume"]),
+                        timeframe=timeframe,
+                    )
+                )
             return candles
 
         except Exception as e:
             print(f"Error fetching candles: {e}")
-            self._connected = False   # treat as stale; next call will reconnect
+            self._connected = False  # treat as stale; next call will reconnect
             return []
 
     def get_current_price(self, symbol: str) -> Optional[float]:
@@ -180,27 +191,32 @@ class CSVConnector:
 
     def load(self, filepath: str, timeframe: str = "15M") -> List[Candle]:
         import csv
+
         candles = []
         with open(filepath, newline="") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 try:
                     # Handle both MT5 date format and ISO format
-                    raw_time = row.get("time") or row.get("Date") or row.get("timestamp")
+                    raw_time = (
+                        row.get("time") or row.get("Date") or row.get("timestamp")
+                    )
                     try:
                         ts = datetime.strptime(raw_time, "%Y.%m.%d %H:%M")
                     except ValueError:
                         ts = datetime.fromisoformat(raw_time)
 
-                    candles.append(Candle(
-                        timestamp=ts,
-                        open=float(row.get("open") or row.get("Open")),
-                        high=float(row.get("high") or row.get("High")),
-                        low=float(row.get("low")  or row.get("Low")),
-                        close=float(row.get("close") or row.get("Close")),
-                        volume=float(row.get("volume") or row.get("Volume") or 0),
-                        timeframe=timeframe,
-                    ))
+                    candles.append(
+                        Candle(
+                            timestamp=ts,
+                            open=float(row.get("open") or row.get("Open")),
+                            high=float(row.get("high") or row.get("High")),
+                            low=float(row.get("low") or row.get("Low")),
+                            close=float(row.get("close") or row.get("Close")),
+                            volume=float(row.get("volume") or row.get("Volume") or 0),
+                            timeframe=timeframe,
+                        )
+                    )
                 except Exception as e:
                     print(f"Skipping row: {e}")
         return candles

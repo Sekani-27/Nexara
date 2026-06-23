@@ -11,13 +11,23 @@ from ..models import FirmConfig
 _FIRMS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _REQUIRED_FIELDS: List[str] = [
-    "daily_dd_pct", "total_dd_pct", "target_pct", "dd_calc",
-    "rollover_time", "rollover_tz",
-    "min_hold_seconds", "min_valid_day_pct", "min_valid_days",
-    "news", "weekend",
-    "internal_soft_stop_pct", "internal_hard_stop_pct",
-    "risk_per_trade_pct", "max_open_risk_pct",
-    "max_trades_per_day", "revenge_lock_hours",
+    "daily_dd_pct",
+    "total_dd_pct",
+    "target_pct",
+    "dd_calc",
+    "rollover_time",
+    "rollover_tz",
+    "min_hold_seconds",
+    "min_valid_day_pct",
+    "min_valid_days",
+    "news",
+    "weekend",
+    "internal_soft_stop_pct",
+    "internal_hard_stop_pct",
+    "risk_per_trade_pct",
+    "max_open_risk_pct",
+    "max_trades_per_day",
+    "revenge_lock_hours",
 ]
 
 
@@ -30,8 +40,7 @@ def load_firm(name: str) -> FirmConfig:
         import yaml  # PyYAML
     except ImportError as exc:
         raise ImportError(
-            "PyYAML is required to load firm configs. "
-            "Run: pip install pyyaml"
+            "PyYAML is required to load firm configs. " "Run: pip install pyyaml"
         ) from exc
 
     filename = f"{name.lower()}.yaml"
@@ -51,9 +60,7 @@ def load_firm(name: str) -> FirmConfig:
 
     missing = [f for f in _REQUIRED_FIELDS if f not in data]
     if missing:
-        raise ValueError(
-            f"Firm config '{name}' is missing required fields: {missing}"
-        )
+        raise ValueError(f"Firm config '{name}' is missing required fields: {missing}")
 
     return FirmConfig(
         name=name,
@@ -79,8 +86,4 @@ def load_firm(name: str) -> FirmConfig:
 
 def list_firms() -> List[str]:
     """Return names of all available firm configs (without .yaml extension)."""
-    return sorted(
-        f[:-5]
-        for f in os.listdir(_FIRMS_DIR)
-        if f.endswith(".yaml")
-    )
+    return sorted(f[:-5] for f in os.listdir(_FIRMS_DIR) if f.endswith(".yaml"))

@@ -19,18 +19,35 @@ from datetime import datetime
 from typing import List, Optional
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger("trader_copilot.runner")
 
 
 # Pairs that use the Breakout & Retest 30M pipeline (Exness demo — `m` suffix)
 CURRENCY_PAIRS = {
-    "EURUSDm", "GBPUSDm", "USDJPYm", "USDCHFm", "AUDUSDm", "USDCADm", "NZDUSDm",
-    "EURGBPm", "EURJPYm", "EURCHFm", "EURAUDm", "EURCADm", "EURNZDm",
-    "GBPJPYm", "GBPCHFm", "GBPAUDm", "GBPCADm", "GBPNZDm",
-    "AUDJPYm", "CADJPYm", "CHFJPYm", "NZDJPYm",
+    "EURUSDm",
+    "GBPUSDm",
+    "USDJPYm",
+    "USDCHFm",
+    "AUDUSDm",
+    "USDCADm",
+    "NZDUSDm",
+    "EURGBPm",
+    "EURJPYm",
+    "EURCHFm",
+    "EURAUDm",
+    "EURCADm",
+    "EURNZDm",
+    "GBPJPYm",
+    "GBPCHFm",
+    "GBPAUDm",
+    "GBPCADm",
+    "GBPNZDm",
+    "AUDJPYm",
+    "CADJPYm",
+    "CHFJPYm",
+    "NZDJPYm",
 }
 
 # Pairs that use the original HTF/LTF pipeline (Exness demo — `m` suffix)
@@ -46,9 +63,7 @@ def run(symbol: str, interval_minutes: int, webhook_urls: Optional[List[str]] = 
 
     config = PAIR_CONFIGS[symbol]
     engine = TraderCopilot(
-        symbol=symbol,
-        webhook_urls=webhook_urls,
-        log_path=f"{symbol}_alerts.jsonl"
+        symbol=symbol, webhook_urls=webhook_urls, log_path=f"{symbol}_alerts.jsonl"
     )
     mt5 = MT5Connector()
 
@@ -58,14 +73,18 @@ def run(symbol: str, interval_minutes: int, webhook_urls: Optional[List[str]] = 
 
     is_currency = symbol in CURRENCY_PAIRS
 
-    logger.info(f"Trader Copilot live | {symbol} | "
-                f"Pipeline: {'Breakout & Retest (30M)' if is_currency else f'HTF/LTF ({config.structure_tf}/{config.entry_tf})'}")
+    logger.info(
+        f"Trader Copilot live | {symbol} | "
+        f"Pipeline: {'Breakout & Retest (30M)' if is_currency else f'HTF/LTF ({config.structure_tf}/{config.entry_tf})'}"
+    )
     logger.info(f"Killzones : {config.killzones}")
     logger.info(f"Polling every {interval_minutes} minutes\n")
 
     try:
         while True:
-            logger.info(f"[{datetime.utcnow().strftime('%H:%M UTC')}] Scanning {symbol}...")
+            logger.info(
+                f"[{datetime.utcnow().strftime('%H:%M UTC')}] Scanning {symbol}..."
+            )
 
             if is_currency:
                 # ── Currency: Breakout & Retest pipeline (30M only) ──────────
@@ -119,25 +138,21 @@ if __name__ == "__main__":
         default="XAUUSDm",
         choices=ALL_PAIRS,
         help=f"Trading pair to scan. Currency pairs use 30M Breakout & Retest pipeline. "
-             f"Supported: {', '.join(ALL_PAIRS)}"
+        f"Supported: {', '.join(ALL_PAIRS)}",
     )
     parser.add_argument(
         "--interval",
         default=30,
         type=int,
-        help="Poll interval in minutes (use 30 for currency pairs, 15 for XAUUSDm/USTEC_x100m)"
+        help="Poll interval in minutes (use 30 for currency pairs, 15 for XAUUSDm/USTEC_x100m)",
     )
     parser.add_argument(
         "--webhook",
         action="append",
         dest="webhooks",
         default=None,
-        help="Telegram or Discord webhook URL — repeat the flag for multiple recipients"
+        help="Telegram or Discord webhook URL — repeat the flag for multiple recipients",
     )
     args = parser.parse_args()
 
-    run(
-        symbol=args.symbol,
-        interval_minutes=args.interval,
-        webhook_urls=args.webhooks
-    )
+    run(symbol=args.symbol, interval_minutes=args.interval, webhook_urls=args.webhooks)

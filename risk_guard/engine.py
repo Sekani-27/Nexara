@@ -31,20 +31,21 @@ class RiskGuardEngine:
         BLOCK always wins over WARN — soft-stop halves risk but we still
         continue checking whether the adjusted proposal is safe.
         """
-        account       = proposal.account_size
-        soft_dollars  = config.internal_soft_stop_pct  / 100.0 * account
-        hard_dollars  = config.internal_hard_stop_pct  / 100.0 * account
-        max_open_dols = config.max_open_risk_pct        / 100.0 * account
+        account = proposal.account_size
+        soft_dollars = config.internal_soft_stop_pct / 100.0 * account
+        hard_dollars = config.internal_hard_stop_pct / 100.0 * account
+        max_open_dols = config.max_open_risk_pct / 100.0 * account
 
         # Dynamic floor and budget helpers
-        dynamic_floor     = state.equity_high - (config.daily_dd_pct / 100.0 * account)
-        current_equity    = state.starting_balance + state.daily_pnl
-        remaining_risk    = round(current_equity - dynamic_floor, 2)
-        trades_remaining  = max(0, config.max_trades_per_day - state.trades_today)
-        progress_pct      = round(state.cumulative_pnl / account * 100.0, 2)
+        dynamic_floor = state.equity_high - (config.daily_dd_pct / 100.0 * account)
+        current_equity = state.starting_balance + state.daily_pnl
+        remaining_risk = round(current_equity - dynamic_floor, 2)
+        trades_remaining = max(0, config.max_trades_per_day - state.trades_today)
+        progress_pct = round(state.cumulative_pnl / account * 100.0, 2)
 
-        def _decision(status: DecisionStatus, reason: str,
-                      adjusted: Optional[float] = None) -> Decision:
+        def _decision(
+            status: DecisionStatus, reason: str, adjusted: Optional[float] = None
+        ) -> Decision:
             return Decision(
                 status=status,
                 reason=reason,
@@ -90,8 +91,8 @@ class RiskGuardEngine:
             )
 
         # ── Check 3: Daily PnL <= internal soft stop → WARN, halve risk ──────
-        adjusted_risk  = proposal.proposed_risk_dollars
-        soft_stop_hit  = False
+        adjusted_risk = proposal.proposed_risk_dollars
+        soft_stop_hit = False
         if proposal.current_daily_pnl <= -soft_dollars:
             adjusted_risk = proposal.proposed_risk_dollars / 2.0
             soft_stop_hit = True
@@ -123,9 +124,7 @@ class RiskGuardEngine:
         if hold_warn_triggered:
             parts = []
             if soft_stop_hit:
-                parts.append(
-                    f"Soft stop: risk halved to ${adjusted_risk:,.2f}."
-                )
+                parts.append(f"Soft stop: risk halved to ${adjusted_risk:,.2f}.")
             parts.append(
                 f"Hold time warning: estimated {proposal.estimated_hold_minutes:.0f}m "
                 f"< minimum {min_hold_minutes:.0f}m ({config.min_hold_seconds}s). "
@@ -165,9 +164,9 @@ class RiskGuardEngine:
         Called on every equity poll (every 30 s).
         Returns BLOCK if floor breached, WARN if within 1%, CLEAR otherwise.
         """
-        dynamic_floor     = equity_high - (config.daily_dd_pct / 100.0 * account_size)
-        proximity_buffer  = 0.01 * account_size
-        remaining         = round(current_equity - dynamic_floor, 2)
+        dynamic_floor = equity_high - (config.daily_dd_pct / 100.0 * account_size)
+        proximity_buffer = 0.01 * account_size
+        remaining = round(current_equity - dynamic_floor, 2)
 
         base = dict(
             remaining_daily_risk=remaining,
@@ -221,31 +220,28 @@ class RiskGuardEngine:
         account = state.account_size
 
         # 1. Valid trading day
-        is_valid_day = (
-            config.min_valid_day_pct == 0.0
-            or state.daily_pnl >= (config.min_valid_day_pct / 100.0 * account)
+        is_valid_day = config.min_valid_day_pct == 0.0 or state.daily_pnl >= (
+            config.min_valid_day_pct / 100.0 * account
         )
 
         # 2. Progress to target
         progress_pct = round(state.cumulative_pnl / account * 100.0, 2)
 
         # 3. Losing streak — last 3 sessions all negative
-        losing_streak = (
-            len(recent_sessions) >= 3
-            and all(s["session_pnl"] < 0.0 for s in recent_sessions[:3])
+        losing_streak = len(recent_sessions) >= 3 and all(
+            s["session_pnl"] < 0.0 for s in recent_sessions[:3]
         )
 
         # 4. Revenge lock — only if session ended via hard stop
-        revenge_locked      = (
-            state.session_ended_via_hard_stop
-            and config.revenge_lock_hours > 0
+        revenge_locked = (
+            state.session_ended_via_hard_stop and config.revenge_lock_hours > 0
         )
 
         return {
-            "is_valid_day":          is_valid_day,
-            "valid_trading_days":    state.valid_trading_days + (1 if is_valid_day else 0),
+            "is_valid_day": is_valid_day,
+            "valid_trading_days": state.valid_trading_days + (1 if is_valid_day else 0),
             "progress_to_target_pct": progress_pct,
-            "losing_streak":         losing_streak,
-            "revenge_locked":        revenge_locked,
-            "revenge_lock_hours":    config.revenge_lock_hours if revenge_locked else 0,
+            "losing_streak": losing_streak,
+            "revenge_locked": revenge_locked,
+            "revenge_lock_hours": config.revenge_lock_hours if revenge_locked else 0,
         }

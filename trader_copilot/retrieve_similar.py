@@ -44,10 +44,10 @@ except ImportError:
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "trade_memory")
-MODEL_NAME      = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
-DEFAULT_TOP_K   = 5
-DEFAULT_HOST    = os.getenv("QDRANT_HOST", "localhost")
-DEFAULT_PORT    = int(os.getenv("QDRANT_PORT", "6333"))
+MODEL_NAME = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
+DEFAULT_TOP_K = 5
+DEFAULT_HOST = os.getenv("QDRANT_HOST", "localhost")
+DEFAULT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 # Module-level singletons — loaded once and reused across calls when imported
 _model: SentenceTransformer | None = None
@@ -69,6 +69,7 @@ def _get_client(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> QdrantCli
 
 
 # ── Core retrieval ────────────────────────────────────────────────────────────
+
 
 def retrieve_similar(
     query: str,
@@ -102,7 +103,7 @@ def retrieve_similar(
     if not query or not query.strip():
         raise ValueError("query must be a non-empty string")
 
-    model  = _get_model()
+    model = _get_model()
     client = _get_client(host, port)
 
     # Encode query
@@ -140,6 +141,7 @@ def retrieve_similar(
 
 # ── Pretty printer ────────────────────────────────────────────────────────────
 
+
 def _format_confluences(confluences: dict | None) -> str:
     if not confluences:
         return "none"
@@ -153,24 +155,26 @@ def _print_results(results: list[dict], query: str) -> None:
     print("─" * 72)
 
     for rank, r in enumerate(results, start=1):
-        sid       = r.get("setup_id", "?")
-        instr     = r.get("instrument", "?").upper()
+        sid = r.get("setup_id", "?")
+        instr = r.get("instrument", "?").upper()
         direction = r.get("direction", "?")
         timeframe = r.get("timeframe", "?")
-        session   = r.get("session", "?")
-        outcome   = r.get("outcome", "?")
-        grade     = r.get("quality_grade", "?")
-        pattern   = r.get("pattern_type", "?").replace("_", " ")
+        session = r.get("session", "?")
+        outcome = r.get("outcome", "?")
+        grade = r.get("quality_grade", "?")
+        pattern = r.get("pattern_type", "?").replace("_", " ")
         is_sniper = r.get("is_sniper", False)
-        score     = r.get("similarity_score", 0.0)
-        notes     = r.get("vision_notes", "")
+        score = r.get("similarity_score", 0.0)
+        notes = r.get("vision_notes", "")
         confluences = _format_confluences(r.get("confluences"))
 
         sniper_tag = " [SNIPER]" if is_sniper else ""
 
         print(f"#{rank}  {sid}{sniper_tag}")
         print(f"    Similarity : {score:.4f}")
-        print(f"    Instrument : {instr}  {direction.upper()}  {timeframe}  |  session: {session}")
+        print(
+            f"    Instrument : {instr}  {direction.upper()}  {timeframe}  |  session: {session}"
+        )
         print(f"    Pattern    : {pattern}")
         print(f"    Confluences: {confluences}")
         print(f"    Outcome    : {outcome}  (grade {grade})")
@@ -178,10 +182,13 @@ def _print_results(results: list[dict], query: str) -> None:
         print("─" * 72)
 
     if not results:
-        print("No results found. Is the collection populated? Run ingest_trade_memory.py first.")
+        print(
+            "No results found. Is the collection populated? Run ingest_trade_memory.py first."
+        )
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -189,34 +196,46 @@ def parse_args() -> argparse.Namespace:
     )
     # Accept query as positional OR --query flag
     parser.add_argument(
-        "query_positional", nargs="?", default=None,
+        "query_positional",
+        nargs="?",
+        default=None,
         metavar="QUERY",
-        help="Query string describing the current setup."
+        help="Query string describing the current setup.",
     )
     parser.add_argument(
-        "--query", "-q", default=None,
-        help="Query string (alternative to positional argument)."
+        "--query",
+        "-q",
+        default=None,
+        help="Query string (alternative to positional argument).",
     )
     parser.add_argument(
-        "--top", "-n", type=int, default=DEFAULT_TOP_K,
+        "--top",
+        "-n",
+        type=int,
+        default=DEFAULT_TOP_K,
         dest="top_k",
-        help=f"Number of results to return (default: {DEFAULT_TOP_K})."
+        help=f"Number of results to return (default: {DEFAULT_TOP_K}).",
     )
     parser.add_argument(
-        "--host", default=DEFAULT_HOST,
-        help=f"Qdrant host (default: {DEFAULT_HOST})."
+        "--host", default=DEFAULT_HOST, help=f"Qdrant host (default: {DEFAULT_HOST})."
     )
     parser.add_argument(
-        "--port", type=int, default=DEFAULT_PORT,
-        help=f"Qdrant port (default: {DEFAULT_PORT})."
+        "--port",
+        type=int,
+        default=DEFAULT_PORT,
+        help=f"Qdrant port (default: {DEFAULT_PORT}).",
     )
     parser.add_argument(
-        "--threshold", type=float, default=0.0,
-        help="Minimum similarity score to include a result (0.0–1.0, default: 0.0)."
+        "--threshold",
+        type=float,
+        default=0.0,
+        help="Minimum similarity score to include a result (0.0–1.0, default: 0.0).",
     )
     parser.add_argument(
-        "--json", action="store_true", dest="output_json",
-        help="Output results as JSON instead of human-readable text."
+        "--json",
+        action="store_true",
+        dest="output_json",
+        help="Output results as JSON instead of human-readable text.",
     )
     return parser.parse_args()
 
@@ -227,9 +246,11 @@ if __name__ == "__main__":
     # Resolve query from positional or flag
     query_str = args.query_positional or args.query
     if not query_str:
-        print("Error: provide a query string.\n"
-              "  python retrieve_similar.py \"EURCAD sell rising wedge OB retest london\"\n"
-              "  python retrieve_similar.py --query \"...\"")
+        print(
+            "Error: provide a query string.\n"
+            '  python retrieve_similar.py "EURCAD sell rising wedge OB retest london"\n'
+            '  python retrieve_similar.py --query "..."'
+        )
         sys.exit(1)
 
     results = retrieve_similar(

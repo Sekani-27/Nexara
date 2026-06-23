@@ -35,56 +35,61 @@ _BASE = "https://api.polygon.io"
 # Gold spot (XAUUSD) is treated as a forex pair on Polygon.
 SYMBOL_MAP: dict = {
     # ── Active runner pairs ───────────────────────────────────────────────────
-    "EURUSDm":     "C:EURUSD",
-    "GBPUSDm":     "C:GBPUSD",
-    "EURAUDm":     "C:EURAUD",
-    "EURCADm":     "C:EURCAD",
-    "CADJPYm":     "C:CADJPY",
-    "GBPCADm":     "C:GBPCAD",
-    "XAUUSDm":     "C:XAUUSD",     # Gold spot — commodity, price-unit pip precision
-    "USTEC_x100m": "I:NDX",        # Nasdaq-100 index — point-unit precision
+    "EURUSDm": "C:EURUSD",
+    "GBPUSDm": "C:GBPUSD",
+    "EURAUDm": "C:EURAUD",
+    "EURCADm": "C:EURCAD",
+    "CADJPYm": "C:CADJPY",
+    "GBPCADm": "C:GBPCAD",
+    "XAUUSDm": "C:XAUUSD",  # Gold spot — commodity, price-unit pip precision
+    "USTEC_x100m": "I:NDX",  # Nasdaq-100 index — point-unit precision
     # ── Additional PAIR_CONFIGS entries (not in default ALL_PAIRS) ────────────
-    "USDJPYm":     "C:USDJPY",
-    "USDCHFm":     "C:USDCHF",
-    "AUDUSDm":     "C:AUDUSD",
-    "USDCADm":     "C:USDCAD",
-    "NZDUSDm":     "C:NZDUSD",
-    "EURGBPm":     "C:EURGBP",
-    "EURJPYm":     "C:EURJPY",
-    "EURCHFm":     "C:EURCHF",
-    "EURNZDm":     "C:EURNZD",
-    "GBPJPYm":     "C:GBPJPY",
-    "GBPCHFm":     "C:GBPCHF",
-    "GBPAUDm":     "C:GBPAUD",
-    "GBPNZDm":     "C:GBPNZD",
-    "AUDJPYm":     "C:AUDJPY",
-    "CHFJPYm":     "C:CHFJPY",
-    "NZDJPYm":     "C:NZDJPY",
-    "AUDCADm":     "C:AUDCAD",
+    "USDJPYm": "C:USDJPY",
+    "USDCHFm": "C:USDCHF",
+    "AUDUSDm": "C:AUDUSD",
+    "USDCADm": "C:USDCAD",
+    "NZDUSDm": "C:NZDUSD",
+    "EURGBPm": "C:EURGBP",
+    "EURJPYm": "C:EURJPY",
+    "EURCHFm": "C:EURCHF",
+    "EURNZDm": "C:EURNZD",
+    "GBPJPYm": "C:GBPJPY",
+    "GBPCHFm": "C:GBPCHF",
+    "GBPAUDm": "C:GBPAUD",
+    "GBPNZDm": "C:GBPNZD",
+    "AUDJPYm": "C:AUDJPY",
+    "CHFJPYm": "C:CHFJPY",
+    "NZDJPYm": "C:NZDJPY",
+    "AUDCADm": "C:AUDCAD",
     # ── Bare-symbol aliases (used by run_multi ALL_PAIRS) ─────────────────────
-    "XAUUSD":      "C:XAUUSD",
-    "EURUSD":      "C:EURUSD",
-    "GBPUSD":      "C:GBPUSD",
-    "USDJPY":      "C:USDJPY",
-    "GBPJPY":      "C:GBPJPY",
-    "CADJPY":      "C:CADJPY",
+    "XAUUSD": "C:XAUUSD",
+    "EURUSD": "C:EURUSD",
+    "GBPUSD": "C:GBPUSD",
+    "USDJPY": "C:USDJPY",
+    "GBPJPY": "C:GBPJPY",
+    "CADJPY": "C:CADJPY",
 }
 
 # ── Internal timeframe → (multiplier, timespan) ───────────────────────────────
 TF_MAP: dict = {
-    "1M":  (1,   "minute"),
-    "5M":  (5,   "minute"),
-    "15M": (15,  "minute"),
-    "30M": (30,  "minute"),
-    "1H":  (1,   "hour"),
-    "4H":  (4,   "hour"),
-    "D":   (1,   "day"),
+    "1M": (1, "minute"),
+    "5M": (5, "minute"),
+    "15M": (15, "minute"),
+    "30M": (30, "minute"),
+    "1H": (1, "hour"),
+    "4H": (4, "hour"),
+    "D": (1, "day"),
 }
 
 # Minutes per bar — used to calculate the lookback date window
 _TF_MINUTES: dict = {
-    "1M": 1, "5M": 5, "15M": 15, "30M": 30,
-    "1H": 60, "4H": 240, "D": 1440,
+    "1M": 1,
+    "5M": 5,
+    "15M": 15,
+    "30M": 30,
+    "1H": 60,
+    "4H": 240,
+    "D": 1440,
 }
 
 
@@ -145,12 +150,12 @@ class MassiveConnector:
         minutes_per_bar = _TF_MINUTES.get(timeframe, 30)
 
         # Build date window — extra 60% buffer for weekends + holidays
-        now     = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
         lookback = timedelta(minutes=count * minutes_per_bar * 1.6)
-        from_dt  = now - lookback
+        from_dt = now - lookback
 
         from_str = from_dt.strftime("%Y-%m-%d")
-        to_str   = now.strftime("%Y-%m-%d")
+        to_str = now.strftime("%Y-%m-%d")
 
         url = (
             f"{_BASE}/v2/aggs/ticker/{ticker}/range"
@@ -175,7 +180,9 @@ class MassiveConnector:
         if status not in ("OK", "DELAYED"):
             log.warning(
                 "[Massive] API status=%s for %s %s — %s",
-                status, symbol, timeframe,
+                status,
+                symbol,
+                timeframe,
                 data.get("error") or data.get("message", ""),
             )
             return []
@@ -184,7 +191,10 @@ class MassiveConnector:
         if not results:
             log.warning(
                 "[Massive] 0 bars returned for %s %s (%s → %s)",
-                symbol, timeframe, from_str, to_str,
+                symbol,
+                timeframe,
+                from_str,
+                to_str,
             )
             return []
 
@@ -193,22 +203,26 @@ class MassiveConnector:
 
         candles: List[Candle] = []
         for bar in bars:
-            ts = datetime.fromtimestamp(
-                bar["t"] / 1000.0, tz=timezone.utc
-            ).replace(tzinfo=None)
-            candles.append(Candle(
-                timestamp=ts,
-                open=float(bar["o"]),
-                high=float(bar["h"]),
-                low=float(bar["l"]),
-                close=float(bar["c"]),
-                volume=float(bar.get("v", 0.0)),
-                timeframe=timeframe,
-            ))
+            ts = datetime.fromtimestamp(bar["t"] / 1000.0, tz=timezone.utc).replace(
+                tzinfo=None
+            )
+            candles.append(
+                Candle(
+                    timestamp=ts,
+                    open=float(bar["o"]),
+                    high=float(bar["h"]),
+                    low=float(bar["l"]),
+                    close=float(bar["c"]),
+                    volume=float(bar.get("v", 0.0)),
+                    timeframe=timeframe,
+                )
+            )
 
         log.info(
             "[Massive] %-12s %-4s — %d candles (latest: %s)",
-            symbol, timeframe, len(candles),
+            symbol,
+            timeframe,
+            len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
         return candles

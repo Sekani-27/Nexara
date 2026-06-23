@@ -23,7 +23,7 @@ class POIEngine:
         candles: List[Candle],
         direction: Direction,
         around_index: int,
-        search_range: int = 5
+        search_range: int = 5,
     ) -> Optional[FairValueGap]:
         """
         3-candle imbalance rule:
@@ -48,14 +48,14 @@ class POIEngine:
                 continue
 
             prev = candles[i - 1]
-            mid  = candles[i]
-            nxt  = candles[i + 1]
+            mid = candles[i]
+            nxt = candles[i + 1]
 
             if direction == Direction.BEARISH:
                 # Gap between bottom of prev candle and top of next candle
-                gap_top    = prev.low
+                gap_top = prev.low
                 gap_bottom = nxt.high
-                gap_size   = gap_top - gap_bottom
+                gap_size = gap_top - gap_bottom
 
                 if gap_size >= min_size and mid.is_bearish:
                     if gap_size > best_size:
@@ -66,14 +66,14 @@ class POIEngine:
                             direction=Direction.BEARISH,
                             candle_index=i,
                             timestamp=mid.timestamp,
-                            size=gap_size
+                            size=gap_size,
                         )
 
             elif direction == Direction.BULLISH:
                 # Gap between top of prev candle and bottom of next candle
                 gap_bottom = prev.high
-                gap_top    = nxt.low
-                gap_size   = gap_top - gap_bottom
+                gap_top = nxt.low
+                gap_size = gap_top - gap_bottom
 
                 if gap_size >= min_size and mid.is_bullish:
                     if gap_size > best_size:
@@ -84,7 +84,7 @@ class POIEngine:
                             direction=Direction.BULLISH,
                             candle_index=i,
                             timestamp=mid.timestamp,
-                            size=gap_size
+                            size=gap_size,
                         )
 
         return best_fvg
@@ -111,7 +111,7 @@ class POIEngine:
         candles: List[Candle],
         direction: Direction,
         sweep_index: int,
-        lookback: int = 5
+        lookback: int = 5,
     ) -> Optional[OrderBlock]:
         """
         Bearish OB: the last BULLISH candle before the sweep rejection.
@@ -130,7 +130,7 @@ class POIEngine:
                         bottom=c.low,
                         direction=Direction.BEARISH,
                         candle=c,
-                        timestamp=c.timestamp
+                        timestamp=c.timestamp,
                     )
 
         elif direction == Direction.BULLISH:
@@ -143,7 +143,7 @@ class POIEngine:
                         bottom=c.low,
                         direction=Direction.BULLISH,
                         candle=c,
-                        timestamp=c.timestamp
+                        timestamp=c.timestamp,
                     )
 
         return None
@@ -161,7 +161,7 @@ class POIEngine:
         level: float,
         direction: Direction,
         bos_index: int,
-        fvg: Optional[FairValueGap] = None
+        fvg: Optional[FairValueGap] = None,
     ) -> Optional[int]:
         """
         After BOS, price retraces back to the iCHoCH / neckline level.
@@ -178,7 +178,9 @@ class POIEngine:
                 # Price retraces UP toward level after bearish BOS
                 price_at_level = c.high >= (level - tolerance)
                 if fvg:
-                    in_fvg = self.is_price_in_fvg(c.high, fvg) or self.is_price_in_fvg(c.close, fvg)
+                    in_fvg = self.is_price_in_fvg(c.high, fvg) or self.is_price_in_fvg(
+                        c.close, fvg
+                    )
                     if price_at_level and in_fvg:
                         return i
                 else:
@@ -189,7 +191,9 @@ class POIEngine:
                 # Price retraces DOWN toward level after bullish BOS
                 price_at_level = c.low <= (level + tolerance)
                 if fvg:
-                    in_fvg = self.is_price_in_fvg(c.low, fvg) or self.is_price_in_fvg(c.close, fvg)
+                    in_fvg = self.is_price_in_fvg(c.low, fvg) or self.is_price_in_fvg(
+                        c.close, fvg
+                    )
                     if price_at_level and in_fvg:
                         return i
                 else:

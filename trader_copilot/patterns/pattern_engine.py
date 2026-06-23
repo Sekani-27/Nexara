@@ -22,8 +22,12 @@ H&S / Inverse H&S:
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from ..core.structures import (
-    Candle, SwingPoint, StructureType, Direction,
-    FairValueGap, LiquiditySweep, BiasType
+    Candle,
+    SwingPoint,
+    StructureType,
+    Direction,
+    FairValueGap,
+    BiasType,
 )
 from ..config.pairs import PairConfig
 
@@ -32,8 +36,8 @@ from ..config.pairs import PairConfig
 class PatternResult:
     pattern_name: str
     direction: Direction
-    neckline: float           # The level that must be broken
-    sweep_level: float        # The liquidity level that was swept
+    neckline: float  # The level that must be broken
+    sweep_level: float  # The liquidity level that was swept
     sweep_candle_index: int
     bos_candle_index: int
     fvg: Optional[FairValueGap]
@@ -51,10 +55,7 @@ class PatternEngine:
     # ─────────────────────────────────────────────
 
     def detect_double_top(
-        self,
-        candles: List[Candle],
-        swings: List[SwingPoint],
-        fvg_engine
+        self, candles: List[Candle], swings: List[SwingPoint], fvg_engine
     ) -> Optional[PatternResult]:
         """
         Double Top detection:
@@ -66,10 +67,18 @@ class PatternEngine:
         6. FVG is printed at the neckline — that's the entry zone
         """
         tolerance = self.config.peak_equality_pips * self.config.pip_size
-        min_wick   = self.config.sweep_wick_pips * self.config.pip_size
+        min_wick = self.config.sweep_wick_pips * self.config.pip_size
 
-        highs = [s for s in swings if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
-        lows  = [s for s in swings if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
+        highs = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
+        lows = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
 
         if len(highs) < 2 or not lows:
             return None
@@ -115,14 +124,18 @@ class PatternEngine:
             neckline = neckline_swing.level
 
             # Find displacement candle: body closes BELOW neckline
-            bos_result = self._find_body_bos(candles, neckline, Direction.BEARISH, peak2.index)
+            bos_result = self._find_body_bos(
+                candles, neckline, Direction.BEARISH, peak2.index
+            )
             if not bos_result:
                 continue
 
             bos_candle, bos_index = bos_result
 
             # FVG must be at the neckline level — search around the BOS candle
-            fvg = fvg_engine.detect_fvg(candles, Direction.BEARISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BEARISH, bos_index, search_range=3
+            )
             fvg_at_neckline = fvg and fvg_engine.fvg_near_level(fvg, neckline)
 
             return PatternResult(
@@ -135,7 +148,7 @@ class PatternEngine:
                 fvg=fvg if fvg_at_neckline else None,
                 valid=True,
                 notes=f"EQH at {eqh_level:.5f}, neckline at {neckline:.5f}, "
-                      f"FVG {'present at neckline' if fvg_at_neckline else 'absent'}"
+                f"FVG {'present at neckline' if fvg_at_neckline else 'absent'}",
             )
 
         return None
@@ -145,10 +158,7 @@ class PatternEngine:
     # ─────────────────────────────────────────────
 
     def detect_double_bottom(
-        self,
-        candles: List[Candle],
-        swings: List[SwingPoint],
-        fvg_engine
+        self, candles: List[Candle], swings: List[SwingPoint], fvg_engine
     ) -> Optional[PatternResult]:
         """
         Mirror of double top — bullish reversal at trend base.
@@ -156,10 +166,18 @@ class PatternEngine:
         → FVG at neckline = entry zone.
         """
         tolerance = self.config.peak_equality_pips * self.config.pip_size
-        min_wick   = self.config.sweep_wick_pips * self.config.pip_size
+        _min_wick = self.config.sweep_wick_pips * self.config.pip_size
 
-        lows  = [s for s in swings if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
-        highs = [s for s in swings if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
+        lows = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
+        highs = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
 
         if len(lows) < 2 or not highs:
             return None
@@ -174,8 +192,8 @@ class PatternEngine:
             eql_level = min(trough1.level, trough2.level)
 
             sweep_candle = candles[trough2.index]
-            wick_below = eql_level - sweep_candle.low
-            body_rejected = sweep_candle.body_low > eql_level
+            _wick_below = eql_level - sweep_candle.low
+            _body_rejected = sweep_candle.body_low > eql_level
 
             # Neckline = swing high between the two troughs
             neckline_swing = None
@@ -193,13 +211,17 @@ class PatternEngine:
 
             neckline = neckline_swing.level
 
-            bos_result = self._find_body_bos(candles, neckline, Direction.BULLISH, trough2.index)
+            bos_result = self._find_body_bos(
+                candles, neckline, Direction.BULLISH, trough2.index
+            )
             if not bos_result:
                 continue
 
             bos_candle, bos_index = bos_result
 
-            fvg = fvg_engine.detect_fvg(candles, Direction.BULLISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BULLISH, bos_index, search_range=3
+            )
             fvg_at_neckline = fvg and fvg_engine.fvg_near_level(fvg, neckline)
 
             return PatternResult(
@@ -212,7 +234,7 @@ class PatternEngine:
                 fvg=fvg if fvg_at_neckline else None,
                 valid=True,
                 notes=f"EQL at {eql_level:.5f}, neckline at {neckline:.5f}, "
-                      f"FVG {'present at neckline' if fvg_at_neckline else 'absent'}"
+                f"FVG {'present at neckline' if fvg_at_neckline else 'absent'}",
             )
 
         return None
@@ -222,10 +244,7 @@ class PatternEngine:
     # ─────────────────────────────────────────────
 
     def detect_head_and_shoulders(
-        self,
-        candles: List[Candle],
-        swings: List[SwingPoint],
-        fvg_engine
+        self, candles: List[Candle], swings: List[SwingPoint], fvg_engine
     ) -> Optional[PatternResult]:
         """
         H&S detection:
@@ -235,8 +254,16 @@ class PatternEngine:
         - Neckline drawn through the two swing lows between LS-Head and Head-RS
         - Execution: neckline break, candle BODY closes below neckline
         """
-        highs = [s for s in swings if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
-        lows  = [s for s in swings if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
+        highs = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
+        lows = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
 
         if len(highs) < 3 or len(lows) < 2:
             return None
@@ -244,9 +271,9 @@ class PatternEngine:
         shoulder_tolerance = self.config.peak_equality_pips * self.config.pip_size * 3
 
         for i in range(len(highs) - 2, 0, -1):
-            ls    = highs[i - 1]
-            head  = highs[i]
-            rs    = highs[i + 1] if i + 1 < len(highs) else None
+            ls = highs[i - 1]
+            head = highs[i]
+            rs = highs[i + 1] if i + 1 < len(highs) else None
 
             if not rs:
                 continue
@@ -275,13 +302,17 @@ class PatternEngine:
             neckline = (nl_low1.level + nl_low2.level) / 2
 
             # BOS: body closes below neckline
-            bos_result = self._find_body_bos(candles, neckline, Direction.BEARISH, rs.index)
+            bos_result = self._find_body_bos(
+                candles, neckline, Direction.BEARISH, rs.index
+            )
             if not bos_result:
                 continue
 
             bos_candle, bos_index = bos_result
 
-            fvg = fvg_engine.detect_fvg(candles, Direction.BEARISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BEARISH, bos_index, search_range=3
+            )
             fvg_at_neckline = fvg and fvg_engine.fvg_near_level(fvg, neckline)
 
             return PatternResult(
@@ -294,7 +325,7 @@ class PatternEngine:
                 fvg=fvg if fvg_at_neckline else None,
                 valid=True,
                 notes=f"Head at {head.level:.5f}, neckline at {neckline:.5f}, "
-                      f"FVG {'present' if fvg_at_neckline else 'absent'}"
+                f"FVG {'present' if fvg_at_neckline else 'absent'}",
             )
 
         return None
@@ -304,14 +335,19 @@ class PatternEngine:
     # ─────────────────────────────────────────────
 
     def detect_inverse_hs(
-        self,
-        candles: List[Candle],
-        swings: List[SwingPoint],
-        fvg_engine
+        self, candles: List[Candle], swings: List[SwingPoint], fvg_engine
     ) -> Optional[PatternResult]:
         """Bullish mirror of H&S."""
-        lows  = [s for s in swings if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
-        highs = [s for s in swings if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
+        lows = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
+        highs = [
+            s
+            for s in swings
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
 
         if len(lows) < 3 or len(highs) < 2:
             return None
@@ -319,9 +355,9 @@ class PatternEngine:
         shoulder_tolerance = self.config.peak_equality_pips * self.config.pip_size * 3
 
         for i in range(len(lows) - 2, 0, -1):
-            ls   = lows[i - 1]
+            ls = lows[i - 1]
             head = lows[i]
-            rs   = lows[i + 1] if i + 1 < len(lows) else None
+            rs = lows[i + 1] if i + 1 < len(lows) else None
 
             if not rs:
                 continue
@@ -345,13 +381,17 @@ class PatternEngine:
 
             neckline = (nl_high1.level + nl_high2.level) / 2
 
-            bos_result = self._find_body_bos(candles, neckline, Direction.BULLISH, rs.index)
+            bos_result = self._find_body_bos(
+                candles, neckline, Direction.BULLISH, rs.index
+            )
             if not bos_result:
                 continue
 
             bos_candle, bos_index = bos_result
 
-            fvg = fvg_engine.detect_fvg(candles, Direction.BULLISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BULLISH, bos_index, search_range=3
+            )
             fvg_at_neckline = fvg and fvg_engine.fvg_near_level(fvg, neckline)
 
             return PatternResult(
@@ -364,7 +404,7 @@ class PatternEngine:
                 fvg=fvg if fvg_at_neckline else None,
                 valid=True,
                 notes=f"Head at {head.level:.5f}, neckline at {neckline:.5f}, "
-                      f"FVG {'present' if fvg_at_neckline else 'absent'}"
+                f"FVG {'present' if fvg_at_neckline else 'absent'}",
             )
 
         return None
@@ -378,7 +418,7 @@ class PatternEngine:
         candles: List[Candle],
         swings: List[SwingPoint],
         bias: BiasType,
-        fvg_engine
+        fvg_engine,
     ) -> Optional[PatternResult]:
         """
         Flag detection:
@@ -392,7 +432,7 @@ class PatternEngine:
         # Look for recent consolidation zone (flag body)
         recent = candles[-20:]
         highs_r = [c.high for c in recent]
-        lows_r  = [c.low  for c in recent]
+        lows_r = [c.low for c in recent]
 
         consolidation_range = max(highs_r) - min(lows_r)
         avg_range = sum(c.total_range for c in recent) / len(recent)
@@ -407,12 +447,16 @@ class PatternEngine:
             flag_low = min(lows_r)
             flag_low_idx = len(candles) - 20 + lows_r.index(flag_low)
 
-            bos_result = self._find_body_bos(candles, flag_low, Direction.BEARISH, flag_low_idx)
+            bos_result = self._find_body_bos(
+                candles, flag_low, Direction.BEARISH, flag_low_idx
+            )
             if not bos_result:
                 return None
 
             bos_candle, bos_index = bos_result
-            fvg = fvg_engine.detect_fvg(candles, Direction.BEARISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BEARISH, bos_index, search_range=3
+            )
 
             return PatternResult(
                 pattern_name="Descending Flag",
@@ -423,7 +467,7 @@ class PatternEngine:
                 bos_candle_index=bos_index,
                 fvg=fvg,
                 valid=True,
-                notes=f"Flag low at {flag_low:.5f}, consolidation range: {consolidation_range:.5f}"
+                notes=f"Flag low at {flag_low:.5f}, consolidation range: {consolidation_range:.5f}",
             )
 
         elif bias == BiasType.BULLISH:
@@ -431,12 +475,16 @@ class PatternEngine:
             flag_high = max(highs_r)
             flag_high_idx = len(candles) - 20 + highs_r.index(flag_high)
 
-            bos_result = self._find_body_bos(candles, flag_high, Direction.BULLISH, flag_high_idx)
+            bos_result = self._find_body_bos(
+                candles, flag_high, Direction.BULLISH, flag_high_idx
+            )
             if not bos_result:
                 return None
 
             bos_candle, bos_index = bos_result
-            fvg = fvg_engine.detect_fvg(candles, Direction.BULLISH, bos_index, search_range=3)
+            fvg = fvg_engine.detect_fvg(
+                candles, Direction.BULLISH, bos_index, search_range=3
+            )
 
             return PatternResult(
                 pattern_name="Ascending Flag",
@@ -447,7 +495,7 @@ class PatternEngine:
                 bos_candle_index=bos_index,
                 fvg=fvg,
                 valid=True,
-                notes=f"Flag high at {flag_high:.5f}, consolidation range: {consolidation_range:.5f}"
+                notes=f"Flag high at {flag_high:.5f}, consolidation range: {consolidation_range:.5f}",
             )
 
         return None
@@ -461,7 +509,7 @@ class PatternEngine:
         candles: List[Candle],
         level: float,
         direction: Direction,
-        start_index: int
+        start_index: int,
     ) -> Optional[Tuple[Candle, int]]:
         """
         Ntando's exact BOS rule: CANDLE BODY must close above/below level.

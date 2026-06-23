@@ -59,7 +59,7 @@ _stdout_handler.addFilter(lambda r: r.levelno < logging.WARNING)  # INFO + DEBUG
 _stdout_handler.setFormatter(_fmt)
 
 _stderr_handler = logging.StreamHandler(sys.stderr)
-_stderr_handler.setLevel(logging.WARNING)   # WARNING, ERROR, CRITICAL
+_stderr_handler.setLevel(logging.WARNING)  # WARNING, ERROR, CRITICAL
 _stderr_handler.setFormatter(_fmt)
 
 logging.root.setLevel(logging.INFO)
@@ -72,6 +72,7 @@ logger = logging.getLogger("trader_copilot.multi_runner")
 # ─────────────────────────────────────────────
 # MARKET-OPEN GATE
 # ─────────────────────────────────────────────
+
 
 def is_forex_market_open() -> bool:
     now = datetime.now(timezone.utc)
@@ -87,20 +88,31 @@ def is_forex_market_open() -> bool:
 # PAIR ROUTING
 # ─────────────────────────────────────────────
 
-CURRENCY_PAIRS  = {
+CURRENCY_PAIRS = {
     # Original six
-    "EURUSD", "GBPUSD", "EURAUD", "EURCAD", "CADJPY", "GBPCAD",
+    "EURUSD",
+    "GBPUSD",
+    "EURAUD",
+    "EURCAD",
+    "CADJPY",
+    "GBPCAD",
     # New additions
-    "GBPJPY", "USDJPY", "USDZAR", "USDCHF",
-    "AUDUSD", "NZDUSD", "USDCAD", "EURJPY",
+    "GBPJPY",
+    "USDJPY",
+    "USDZAR",
+    "USDCHF",
+    "AUDUSD",
+    "NZDUSD",
+    "USDCAD",
+    "EURJPY",
 }
-COMMODITY_PAIRS = {"XAUUSD"}    # Gold — 4H/15M, price-unit pip precision
-INDEX_PAIRS     = {"NAS100"}    # Nasdaq-100 — 4H/15M, point-unit precision
+COMMODITY_PAIRS = {"XAUUSD"}  # Gold — 4H/15M, price-unit pip precision
+INDEX_PAIRS = {"NAS100"}  # Nasdaq-100 — 4H/15M, point-unit precision
 
 # Explicit scan order — XAUUSD first so it hits TwelveData before the
 # rate-limit window fills.  6 pairs active.
 ALL_PAIRS = [
-    "XAUUSD",   # Gold — scanned first, before rate-limit window fills
+    "XAUUSD",  # Gold — scanned first, before rate-limit window fills
     "EURUSD",
     "GBPUSD",
     "USDJPY",
@@ -112,6 +124,7 @@ ALL_PAIRS = [
 # ─────────────────────────────────────────────
 # DUPLICATE PREVENTION
 # ─────────────────────────────────────────────
+
 
 class AlertTracker:
     """
@@ -128,7 +141,7 @@ class AlertTracker:
     allowing a legitimately new setup on the same pair the next day.
     """
 
-    STALE_HOURS = 2   # signals older than this are dropped before even checking
+    STALE_HOURS = 2  # signals older than this are dropped before even checking
 
     def __init__(self, ttl_cycles: int = 48):
         self.ttl_cycles = ttl_cycles
@@ -141,7 +154,9 @@ class AlertTracker:
             return ts.replace(tzinfo=timezone.utc)
         return ts
 
-    def _key(self, symbol: str, pattern: str, direction: str, candle_ts: datetime) -> str:
+    def _key(
+        self, symbol: str, pattern: str, direction: str, candle_ts: datetime
+    ) -> str:
         ts_str = self._normalise_ts(candle_ts).strftime("%Y%m%d%H%M")
         return f"{symbol}:{pattern}:{direction}:{ts_str}"
 
@@ -150,12 +165,12 @@ class AlertTracker:
         age = datetime.now(timezone.utc) - self._normalise_ts(candle_ts)
         return age > timedelta(hours=self.STALE_HOURS)
 
-    def is_duplicate(self, symbol: str, pattern: str,
-                     direction: str, candle_ts: datetime) -> bool:
+    def is_duplicate(
+        self, symbol: str, pattern: str, direction: str, candle_ts: datetime
+    ) -> bool:
         return self._key(symbol, pattern, direction, candle_ts) in self._active
 
-    def register(self, symbol: str, pattern: str,
-                 direction: str, candle_ts: datetime):
+    def register(self, symbol: str, pattern: str, direction: str, candle_ts: datetime):
         key = self._key(symbol, pattern, direction, candle_ts)
         self._active[key] = self.ttl_cycles
         logger.debug("Alert registered: %s | TTL: %d cycles", key, self.ttl_cycles)
@@ -174,8 +189,10 @@ class AlertTracker:
 # PAIR SCANNER
 # ─────────────────────────────────────────────
 
-def _fetch(primary, fallback, symbol: str, timeframe: str,
-           count: int = 300, twelvedata=None) -> list:
+
+def _fetch(
+    primary, fallback, symbol: str, timeframe: str, count: int = 300, twelvedata=None
+) -> list:
     """
     Three-tier data chain: MT5 → Massive (Polygon.io) → TwelveData.
     Returns the first non-empty result and logs which source delivered it.
@@ -204,8 +221,8 @@ def scan_pair(
     config,
     tracker: AlertTracker,
     dry_run: bool = False,
-    massive=None,       # MassiveConnector (Polygon.io) — second in chain
-    twelvedata=None,    # TwelveDataConnector — third in chain
+    massive=None,  # MassiveConnector (Polygon.io) — second in chain
+    twelvedata=None,  # TwelveDataConnector — third in chain
 ) -> bool:
     """
     Runs one scan cycle for a single pair using its correct pipeline.
@@ -214,18 +231,26 @@ def scan_pair(
     """
     try:
         if symbol in CURRENCY_PAIRS:
-            candles = _fetch(mt5, massive, symbol, "30M",
-                             count=300, twelvedata=twelvedata)
+            candles = _fetch(
+                mt5, massive, symbol, "30M", count=300, twelvedata=twelvedata
+            )
             if not candles:
                 logger.warning(f"{symbol:10s} — No 30M candles from any source")
                 return False
             signal = engine.analyse_currency_30m(candles)
 
         else:
-            candles_htf = _fetch(mt5, massive, symbol, config.structure_tf,
-                                 count=300, twelvedata=twelvedata)
-            candles_ltf = _fetch(mt5, massive, symbol, config.entry_tf,
-                                 count=300, twelvedata=twelvedata)
+            candles_htf = _fetch(
+                mt5,
+                massive,
+                symbol,
+                config.structure_tf,
+                count=300,
+                twelvedata=twelvedata,
+            )
+            candles_ltf = _fetch(
+                mt5, massive, symbol, config.entry_tf, count=300, twelvedata=twelvedata
+            )
             if not candles_htf or not candles_ltf:
                 logger.warning(f"{symbol:10s} — No candles from any source")
                 return False
@@ -254,8 +279,9 @@ def scan_pair(
         # ── Bug 1: Duplicate gate ─────────────────────────────────────────
         # Key = symbol:pattern:direction:candle_open_time — stable across every
         # poll cycle regardless of how the live close price fluctuates.
-        if tracker.is_duplicate(symbol, signal.pattern,
-                                 signal.direction.value, signal.timestamp):
+        if tracker.is_duplicate(
+            symbol, signal.pattern, signal.direction.value, signal.timestamp
+        ):
             logger.info(
                 f"{symbol:10s} — Duplicate suppressed "
                 f"({signal.pattern} {signal.direction.value.upper()} "
@@ -284,7 +310,7 @@ def scan_pair(
             pip = 0.01
         else:
             pip = 0.0001
-        pip_threshold = 15 * pip
+        _pip_threshold = 15 * pip
 
         # Try Massive first (cheaper, no shared rate-limit bucket with candle
         # fetches), fall back to TwelveData, log clearly if both return None.
@@ -292,11 +318,19 @@ def scan_pair(
         if massive is not None and massive.is_available():
             current_price = massive.get_current_price(symbol)
             if current_price is not None:
-                logger.debug(f"{symbol:10s} — price-gate: current price from Massive: {current_price:.5f}")
-        if current_price is None and twelvedata is not None and twelvedata.is_available():
+                logger.debug(
+                    f"{symbol:10s} — price-gate: current price from Massive: {current_price:.5f}"
+                )
+        if (
+            current_price is None
+            and twelvedata is not None
+            and twelvedata.is_available()
+        ):
             current_price = twelvedata.get_current_price(symbol)
             if current_price is not None:
-                logger.debug(f"{symbol:10s} — price-gate: current price from TwelveData: {current_price:.5f}")
+                logger.debug(
+                    f"{symbol:10s} — price-gate: current price from TwelveData: {current_price:.5f}"
+                )
 
         if current_price is None:
             logger.warning(
@@ -310,7 +344,8 @@ def scan_pair(
             # For a BUY, price above entry means the level was already triggered.
             # For a SELL, price below entry means the level was already triggered.
             overshoot = (
-                (current_price - signal.entry_price) if direction_up
+                (current_price - signal.entry_price)
+                if direction_up
                 else (signal.entry_price - current_price)
             )
             overshoot_pips = overshoot / pip
@@ -326,8 +361,9 @@ def scan_pair(
                     f"entry={signal.entry_price:.5f} current={current_price:.5f} "
                     f"overshoot={overshoot_pips:.1f} pips | STALE=True"
                 )
-                tracker.register(symbol, signal.pattern,
-                                  signal.direction.value, signal.timestamp)
+                tracker.register(
+                    symbol, signal.pattern, signal.direction.value, signal.timestamp
+                )
                 return False
 
         if not dry_run:
@@ -335,8 +371,9 @@ def scan_pair(
         else:
             logger.info(f"{symbol:10s} — [DRY-RUN] Alert suppressed")
 
-        tracker.register(symbol, signal.pattern,
-                         signal.direction.value, signal.timestamp)
+        tracker.register(
+            symbol, signal.pattern, signal.direction.value, signal.timestamp
+        )
         return True
 
     except Exception as exc:
@@ -352,10 +389,12 @@ _DEBRIEF_HOUR = 17  # UTC hour to fire
 
 _DEBRIEF_DB_PATH = os.environ.get(
     "JOURNAL_DB_PATH",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "trader_copilot_journal.db"),
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "trader_copilot_journal.db"
+    ),
 )
 
-_TELEGRAM_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN")
+_TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 _TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
@@ -396,29 +435,32 @@ def _get_risk_guard_state() -> dict:
     """
     try:
         import health_server  # imported after start_health_server() runs
+
         rg = health_server._state.get("risk_guard", {})
         return {
-            "open_positions":     rg.get("open_positions",     []),
-            "open_trade_count":   rg.get("open_trade_count",   0),
-            "total_exposure":     rg.get("total_exposure",     0.0),
+            "open_positions": rg.get("open_positions", []),
+            "open_trade_count": rg.get("open_trade_count", 0),
+            "total_exposure": rg.get("total_exposure", 0.0),
             "realized_pnl_today": rg.get("realized_pnl_today", 0.0),
         }
     except Exception as exc:
         logger.warning("Debrief: could not read risk_guard state — %s", exc)
         return {
-            "open_positions": [], "open_trade_count": 0,
-            "total_exposure": 0.0, "realized_pnl_today": 0.0,
+            "open_positions": [],
+            "open_trade_count": 0,
+            "total_exposure": 0.0,
+            "realized_pnl_today": 0.0,
         }
 
 
 def _build_debrief_message(today_str: str) -> str:
     signals = _query_signals_today(today_str)
-    rg      = _get_risk_guard_state()
+    rg = _get_risk_guard_state()
 
-    pnl        = rg["realized_pnl_today"]
-    pnl_str    = f"+${pnl:,.2f}" if pnl >= 0 else f"-${abs(pnl):,.2f}"
+    pnl = rg["realized_pnl_today"]
+    pnl_str = f"+${pnl:,.2f}" if pnl >= 0 else f"-${abs(pnl):,.2f}"
     open_count = rg["open_trade_count"]
-    exposure   = rg["total_exposure"]
+    exposure = rg["total_exposure"]
 
     # Risk guard status line
     if open_count == 0:
@@ -456,12 +498,15 @@ def _build_debrief_message(today_str: str) -> str:
 def _send_debrief_telegram(text: str) -> None:
     """POST debrief message directly to the Telegram Bot API via urllib."""
     if not _TELEGRAM_TOKEN or not _TELEGRAM_CHAT_ID:
-        logger.warning("Debrief: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set — skipping send.")
+        logger.warning(
+            "Debrief: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set — skipping send."
+        )
         return
-    url     = f"https://api.telegram.org/bot{_TELEGRAM_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{_TELEGRAM_TOKEN}/sendMessage"
     payload = json.dumps({"chat_id": _TELEGRAM_CHAT_ID, "text": text}).encode()
-    req     = urllib.request.Request(
-        url, data=payload,
+    req = urllib.request.Request(
+        url,
+        data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
@@ -478,11 +523,13 @@ def _debrief_loop() -> None:
     A date tracker prevents double-firing if the process restarts mid-minute.
     """
     last_fired: Optional[str] = None
-    logger.info("Debrief thread started — will fire daily at %02d:00 UTC.", _DEBRIEF_HOUR)
+    logger.info(
+        "Debrief thread started — will fire daily at %02d:00 UTC.", _DEBRIEF_HOUR
+    )
 
     while True:
         time.sleep(60)
-        now       = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
         today_str = now.strftime("%Y-%m-%d")
 
         if now.hour != _DEBRIEF_HOUR or now.minute != 0:
@@ -510,6 +557,7 @@ def start_debrief_thread() -> threading.Thread:
 # ─────────────────────────────────────────────
 # MAIN RUNNER
 # ─────────────────────────────────────────────
+
 
 def run(
     pairs: List[str],
@@ -560,19 +608,19 @@ def run(
 
     # Build one engine instance per pair
     engines: Dict[str, TraderCopilot] = {}
-    configs  = {}
+    configs = {}
     for symbol in pairs:
         engines[symbol] = TraderCopilot(
             symbol=symbol,
             webhook_urls=[webhook_url] if webhook_url else None,
-            log_path=f"{symbol}_alerts.jsonl"
+            log_path=f"{symbol}_alerts.jsonl",
         )
         configs[symbol] = PAIR_CONFIGS[symbol]
 
     tracker = AlertTracker(ttl_cycles=5)
 
     logger.info(f"{'═' * 60}")
-    logger.info(f"  Trader Copilot — Multi-Pair Runner")
+    logger.info("  Trader Copilot — Multi-Pair Runner")
     logger.info(f"  Pairs     : {', '.join(pairs)}")
     logger.info(f"  Interval  : {interval_minutes} min")
     logger.info(f"  Webhook   : {'configured' if webhook_url else 'none'}")
@@ -582,6 +630,7 @@ def run(
     # Start Telegram polling in a background daemon thread so inbound messages
     # (keyword queries and Groq fallback) are handled while the scan loop runs.
     from trader_copilot.telegram_bot import start_polling_thread
+
     start_polling_thread()
 
     # Daily session debrief at 17:00 UTC.
@@ -623,7 +672,7 @@ def run(
                     twelvedata=twelvedata,
                 ):
                     signals_fired += 1
-                time.sleep(2)   # rate-limit buffer between pair scans
+                time.sleep(2)  # rate-limit buffer between pair scans
 
             update_health(pairs=len(pairs), cycle=cycle)
             logger.info(
@@ -649,7 +698,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Trader Copilot — Multi-Pair Runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"Supported pairs: {', '.join(ALL_PAIRS)}"
+        epilog=f"Supported pairs: {', '.join(ALL_PAIRS)}",
     )
     parser.add_argument(
         "--pairs",
@@ -658,26 +707,26 @@ if __name__ == "__main__":
         choices=ALL_PAIRS,
         metavar="SYMBOL",
         help="Pairs to scan (default: all). "
-             f"Currency pairs use the 30M Breakout & Retest engine; "
-             f"XAUUSD/NAS100 use the HTF/LTF structure engine."
+        "Currency pairs use the 30M Breakout & Retest engine; "
+        "XAUUSD/NAS100 use the HTF/LTF structure engine.",
     )
     parser.add_argument(
         "--interval",
         default=5,
         type=int,
         metavar="MINUTES",
-        help="Poll interval in minutes (default: 5)"
+        help="Poll interval in minutes (default: 5)",
     )
     parser.add_argument(
         "--webhook",
         default=None,
         metavar="URL",
-        help="Telegram or Discord webhook URL for alert delivery"
+        help="Telegram or Discord webhook URL for alert delivery",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Log signals without dispatching alerts (useful for forward-testing)"
+        help="Log signals without dispatching alerts (useful for forward-testing)",
     )
     args = parser.parse_args()
 

@@ -50,41 +50,43 @@ class RiskGuardMonitor:
 
     def __init__(
         self,
-        config:           FirmConfig,
-        state_db:         RiskGuardState,
-        equity_fetcher:   Callable[[], float],
-        account_size:     float,
-        poll_interval:    int = 30,
-        on_block:         Optional[Callable[[Decision], None]] = None,
-        on_warn:          Optional[Callable[[Decision], None]] = None,
-        on_rollover:      Optional[Callable[[SessionState], None]] = None,
-        telegram_token:   Optional[str] = None,
+        config: FirmConfig,
+        state_db: RiskGuardState,
+        equity_fetcher: Callable[[], float],
+        account_size: float,
+        poll_interval: int = 30,
+        on_block: Optional[Callable[[Decision], None]] = None,
+        on_warn: Optional[Callable[[Decision], None]] = None,
+        on_rollover: Optional[Callable[[SessionState], None]] = None,
+        telegram_token: Optional[str] = None,
         telegram_chat_id: Optional[str] = None,
-        env_file:         Optional[str] = None,
+        env_file: Optional[str] = None,
     ):
-        self.config         = config
-        self.state_db       = state_db
+        self.config = config
+        self.state_db = state_db
         self.equity_fetcher = equity_fetcher
-        self.account_size   = account_size
-        self.poll_interval  = poll_interval
-        self.on_block       = on_block
-        self.on_warn        = on_warn
-        self.on_rollover    = on_rollover
-        self._engine        = RiskGuardEngine()
-        self._running       = False
-        self._env_file      = env_file
+        self.account_size = account_size
+        self.poll_interval = poll_interval
+        self.on_block = on_block
+        self.on_warn = on_warn
+        self.on_rollover = on_rollover
+        self._engine = RiskGuardEngine()
+        self._running = False
+        self._env_file = env_file
 
         # Resolve Telegram credentials: explicit arg > env file > os.environ
         import os
+
         if env_file and telegram_token is None:
             try:
                 from dotenv import dotenv_values
+
                 _env = dotenv_values(env_file)
-                telegram_token   = _env.get("TELEGRAM_BOT_TOKEN")
+                telegram_token = _env.get("TELEGRAM_BOT_TOKEN")
                 telegram_chat_id = _env.get("TELEGRAM_CHAT_ID")
             except ImportError:
                 pass
-        self._tg_token   = telegram_token   or os.getenv("TELEGRAM_BOT_TOKEN")
+        self._tg_token = telegram_token or os.getenv("TELEGRAM_BOT_TOKEN")
         self._tg_chat_id = telegram_chat_id or os.getenv("TELEGRAM_CHAT_ID")
 
     # ─────────────────────────────────────────────
@@ -97,8 +99,8 @@ class RiskGuardMonitor:
         env_file: str,
         equity_fetcher: Callable[[], float],
         poll_interval: int = 30,
-        on_block:   Optional[Callable[[Decision], None]] = None,
-        on_warn:    Optional[Callable[[Decision], None]] = None,
+        on_block: Optional[Callable[[Decision], None]] = None,
+        on_warn: Optional[Callable[[Decision], None]] = None,
         on_rollover: Optional[Callable[[SessionState], None]] = None,
     ) -> "RiskGuardMonitor":
         """
@@ -131,7 +133,7 @@ class RiskGuardMonitor:
         )
         # Expose the RiskGuard instance so callers can also use check_trade()
         instance.risk_guard = rg
-        instance.state      = rg.state
+        instance.state = rg.state
         return instance
 
     # ─────────────────────────────────────────────
@@ -158,7 +160,9 @@ class RiskGuardMonitor:
 
         log.info(
             "[Monitor:%s] Rollover: session %s → %s",
-            self.config.name, state.session_date, current_date.isoformat(),
+            self.config.name,
+            state.session_date,
+            current_date.isoformat(),
         )
         new_state = self.state_db.rollover(state, current_date, self.config)
         if self.on_rollover:
@@ -175,6 +179,7 @@ class RiskGuardMonitor:
     async def send_alert(self, text: str) -> None:
         """Send a Telegram alert using this monitor instance's credentials."""
         from .alerts import send_rg_alert
+
         await send_rg_alert(
             text,
             token=self._tg_token,
@@ -243,7 +248,8 @@ class RiskGuardMonitor:
         self._running = True
         log.info(
             "[Monitor:%s] Started — polling every %ds | env_file=%s",
-            self.config.name, self.poll_interval,
+            self.config.name,
+            self.poll_interval,
             self._env_file or "<default .env>",
         )
         while self._running:

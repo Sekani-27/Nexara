@@ -37,16 +37,17 @@ except ImportError:
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "trade_memory")
-MODEL_NAME      = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
-VECTOR_SIZE     = 384
-DISTANCE        = Distance.COSINE
+MODEL_NAME = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
+VECTOR_SIZE = 384
+DISTANCE = Distance.COSINE
 
-DEFAULT_JSON    = Path(__file__).parent / "trade_memory.json"
-DEFAULT_HOST    = os.getenv("QDRANT_HOST", "localhost")
-DEFAULT_PORT    = int(os.getenv("QDRANT_PORT", "6333"))
+DEFAULT_JSON = Path(__file__).parent / "trade_memory.json"
+DEFAULT_HOST = os.getenv("QDRANT_HOST", "localhost")
+DEFAULT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 
 # ── Text representation ───────────────────────────────────────────────────────
+
 
 def build_text(record: dict) -> str:
     """
@@ -59,21 +60,19 @@ def build_text(record: dict) -> str:
          supply_demand_zone, ninety_percent_rule.
          Notes: Descending bearish channel with rising corrective wedge..."
     """
-    instrument   = record.get("instrument", "unknown").upper()
-    direction    = record.get("direction", "unknown")
-    session      = record.get("session", "unknown")
+    instrument = record.get("instrument", "unknown").upper()
+    direction = record.get("direction", "unknown")
+    session = record.get("session", "unknown")
     pattern_type = record.get("pattern_type", "unknown").replace("_", " ")
-    outcome      = record.get("outcome", "unknown")
-    timeframe    = record.get("timeframe", "unknown")
-    quality      = record.get("quality_grade", "")
+    outcome = record.get("outcome", "unknown")
+    timeframe = record.get("timeframe", "unknown")
+    quality = record.get("quality_grade", "")
     vision_notes = record.get("vision_notes", "")
 
     # Flatten confluences — list only the True ones
     confluences_raw = record.get("confluences") or {}
     active_confluences = [
-        k.replace("_", " ")
-        for k, v in confluences_raw.items()
-        if v is True
+        k.replace("_", " ") for k, v in confluences_raw.items() if v is True
     ]
     confluence_str = ", ".join(active_confluences) if active_confluences else "none"
 
@@ -98,6 +97,7 @@ def build_text(record: dict) -> str:
 
 # ── Collection bootstrap ───────────────────────────────────────────────────────
 
+
 def ensure_collection(client: QdrantClient) -> None:
     """Create the collection if it doesn't already exist."""
     existing = {c.name for c in client.get_collections().collections}
@@ -106,13 +106,18 @@ def ensure_collection(client: QdrantClient) -> None:
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=VECTOR_SIZE, distance=DISTANCE),
         )
-        print(f"[setup] Created collection '{COLLECTION_NAME}' "
-              f"(size={VECTOR_SIZE}, distance=cosine)")
+        print(
+            f"[setup] Created collection '{COLLECTION_NAME}' "
+            f"(size={VECTOR_SIZE}, distance=cosine)"
+        )
     else:
-        print(f"[setup] Collection '{COLLECTION_NAME}' already exists — skipping creation")
+        print(
+            f"[setup] Collection '{COLLECTION_NAME}' already exists — skipping creation"
+        )
 
 
 # ── Ingest ────────────────────────────────────────────────────────────────────
+
 
 def ingest(json_path: Path, host: str, port: int) -> None:
     # 1. Load records
@@ -125,8 +130,10 @@ def ingest(json_path: Path, host: str, port: int) -> None:
     skipped = len(records) - len(valid_records)
     if skipped:
         skipped_ids = [r["setup_id"] for r in records if r.get("outcome") is None]
-        print(f"[skip]  Skipping {skipped} record(s) with null outcome: "
-              f"{', '.join(skipped_ids)}")
+        print(
+            f"[skip]  Skipping {skipped} record(s) with null outcome: "
+            f"{', '.join(skipped_ids)}"
+        )
 
     # 3. Load embedding model
     print(f"[model] Loading sentence-transformer '{MODEL_NAME}' …")
@@ -161,7 +168,7 @@ def ingest(json_path: Path, host: str, port: int) -> None:
             PointStruct(
                 id=point_id,
                 vector=vector.tolist(),
-                payload=record,          # full JSON stored as payload
+                payload=record,  # full JSON stored as payload
             )
         )
 
@@ -188,21 +195,25 @@ def ingest(json_path: Path, host: str, port: int) -> None:
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Ingest trade_memory.json into Qdrant with sentence-transformer embeddings."
     )
     parser.add_argument(
-        "--file", type=Path, default=DEFAULT_JSON,
-        help=f"Path to trade_memory.json (default: {DEFAULT_JSON})"
+        "--file",
+        type=Path,
+        default=DEFAULT_JSON,
+        help=f"Path to trade_memory.json (default: {DEFAULT_JSON})",
     )
     parser.add_argument(
-        "--host", default=DEFAULT_HOST,
-        help=f"Qdrant host (default: {DEFAULT_HOST})"
+        "--host", default=DEFAULT_HOST, help=f"Qdrant host (default: {DEFAULT_HOST})"
     )
     parser.add_argument(
-        "--port", type=int, default=DEFAULT_PORT,
-        help=f"Qdrant port (default: {DEFAULT_PORT})"
+        "--port",
+        type=int,
+        default=DEFAULT_PORT,
+        help=f"Qdrant port (default: {DEFAULT_PORT})",
     )
     return parser.parse_args()
 

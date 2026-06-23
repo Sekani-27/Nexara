@@ -16,17 +16,17 @@ class Direction(Enum):
 
 
 class StructureType(Enum):
-    HH = "HH"   # Higher High
-    HL = "HL"   # Higher Low
-    LH = "LH"   # Lower High
-    LL = "LL"   # Lower Low
-    EQH = "EQH" # Equal High
-    EQL = "EQL" # Equal Low
+    HH = "HH"  # Higher High
+    HL = "HL"  # Higher Low
+    LH = "LH"  # Lower High
+    LL = "LL"  # Lower Low
+    EQH = "EQH"  # Equal High
+    EQL = "EQL"  # Equal Low
 
 
 class BiasType(Enum):
-    BULLISH = "bullish"   # HH / HL sequence → look for buys
-    BEARISH = "bearish"   # LH / LL sequence → look for sells
+    BULLISH = "bullish"  # HH / HL sequence → look for buys
+    BEARISH = "bearish"  # LH / LL sequence → look for sells
     RANGING = "ranging"
 
 
@@ -77,9 +77,9 @@ class Candle:
 class SwingPoint:
     candle: Candle
     swing_type: StructureType
-    level: float          # The price of the swing high or low
-    index: int            # Position in the candle array
-    swept: bool = False   # Has this swing been swept
+    level: float  # The price of the swing high or low
+    index: int  # Position in the candle array
+    swept: bool = False  # Has this swing been swept
 
 
 @dataclass
@@ -91,12 +91,20 @@ class MarketStructure:
 
     @property
     def last_swing_high(self) -> Optional[SwingPoint]:
-        highs = [s for s in self.swings if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
+        highs = [
+            s
+            for s in self.swings
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
         return highs[-1] if highs else None
 
     @property
     def last_swing_low(self) -> Optional[SwingPoint]:
-        lows = [s for s in self.swings if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
+        lows = [
+            s
+            for s in self.swings
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
         return lows[-1] if lows else None
 
 
@@ -104,11 +112,11 @@ class MarketStructure:
 class FairValueGap:
     top: float
     bottom: float
-    direction: Direction      # Bearish FVG (price fell through) or Bullish FVG
-    candle_index: int         # Index of the displacement (middle) candle
+    direction: Direction  # Bearish FVG (price fell through) or Bullish FVG
+    candle_index: int  # Index of the displacement (middle) candle
     timestamp: datetime
-    size: float               # Gap size in price
-    mitigated: bool = False   # Has price returned to fill it
+    size: float  # Gap size in price
+    mitigated: bool = False  # Has price returned to fill it
 
     @property
     def midpoint(self) -> float:
@@ -119,7 +127,7 @@ class FairValueGap:
 class OrderBlock:
     top: float
     bottom: float
-    direction: Direction      # Bearish OB or Bullish OB
+    direction: Direction  # Bearish OB or Bullish OB
     candle: Candle
     timestamp: datetime
     mitigated: bool = False
@@ -129,9 +137,9 @@ class OrderBlock:
 class LiquiditySweep:
     level: float
     sweep_candle: Candle
-    direction: Direction      # Which side was swept (HIGH or LOW)
+    direction: Direction  # Which side was swept (HIGH or LOW)
     wick_size: float
-    body_rejected: bool       # Body closed back on the other side
+    body_rejected: bool  # Body closed back on the other side
 
 
 @dataclass
@@ -144,7 +152,7 @@ class TradeSignal:
     timeframe: str
     timestamp: datetime
     pattern: str
-    confluence_score: int     # 1-5 scale
+    confluence_score: int  # 1-5 scale
     fvg_present: bool
     ob_present: bool
     killzone_active: bool

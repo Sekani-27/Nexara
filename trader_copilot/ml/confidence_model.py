@@ -15,38 +15,35 @@ Fallback: if < MIN_SAMPLES completed trades exist,
 """
 
 import os
-import json
 import pickle
 import warnings
-import numpy as np
-from typing import Optional, Tuple, List, Dict
+from typing import Tuple, List, Dict
 from datetime import datetime
 
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (
-    classification_report, roc_auc_score,
-    confusion_matrix, brier_score_loss
+    roc_auc_score,
+    brier_score_loss,
 )
-import warnings
+
 warnings.filterwarnings("ignore")
 
-from .features import trades_to_dataset, trade_to_features, feature_names, FEATURE_DIM
+from .features import trades_to_dataset, trade_to_features, feature_names
 
-MIN_SAMPLES   = 30    # Minimum completed trades before ML kicks in
-MIN_PER_CLASS = 5     # Need at least 5 wins and 5 losses to train
+MIN_SAMPLES = 30  # Minimum completed trades before ML kicks in
+MIN_PER_CLASS = 5  # Need at least 5 wins and 5 losses to train
 
 
 class ConfidenceModel:
 
     def __init__(self, model_path: str = "trader_copilot_model.pkl"):
-        self.model_path  = model_path
-        self.model       = None
-        self.scaler      = StandardScaler()
-        self.is_trained  = False
+        self.model_path = model_path
+        self.model = None
+        self.scaler = StandardScaler()
+        self.is_trained = False
         self.train_stats = {}
         self.feature_importances: Dict[str, float] = {}
 
@@ -64,19 +61,19 @@ class ConfidenceModel:
         if len(X) == 0:
             return {"error": "No completed trades found in journal."}
 
-        n_wins   = int(y.sum())
+        n_wins = int(y.sum())
         n_losses = len(y) - n_wins
 
         if len(X) < MIN_SAMPLES:
             return {
                 "error": f"Need {MIN_SAMPLES} completed trades to train. "
-                         f"Currently have {len(X)}. Using rule-based scoring."
+                f"Currently have {len(X)}. Using rule-based scoring."
             }
 
         if n_wins < MIN_PER_CLASS or n_losses < MIN_PER_CLASS:
             return {
                 "error": f"Need at least {MIN_PER_CLASS} wins and {MIN_PER_CLASS} losses. "
-                         f"Currently: {n_wins} wins, {n_losses} losses."
+                f"Currently: {n_wins} wins, {n_losses} losses."
             }
 
         print(f"[ML] Training on {len(X)} trades | {n_wins} wins | {n_losses} losses")
@@ -103,16 +100,18 @@ class ConfidenceModel:
         cv = StratifiedKFold(n_splits=min(5, n_wins), shuffle=True, random_state=42)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            cv_scores = cross_val_score(self.model, X_scaled, y, cv=cv, scoring="roc_auc")
+            cv_scores = cross_val_score(
+                self.model, X_scaled, y, cv=cv, scoring="roc_auc"
+            )
 
         # ── In-sample metrics
-        y_pred  = self.model.predict(X_scaled)
+        _y_pred = self.model.predict(X_scaled)
         y_proba = self.model.predict_proba(X_scaled)[:, 1]
 
-        auc     = round(roc_auc_score(y, y_proba), 4)
-        brier   = round(brier_score_loss(y, y_proba), 4)
+        auc = round(roc_auc_score(y, y_proba), 4)
+        brier = round(brier_score_loss(y, y_proba), 4)
         cv_mean = round(cv_scores.mean(), 4)
-        cv_std  = round(cv_scores.std(), 4)
+        cv_std = round(cv_scores.std(), 4)
 
         # ── Feature importances (from base estimators)
         try:
@@ -120,31 +119,29 @@ class ConfidenceModel:
             importances = raw_model.feature_importances_
             names = feature_names()
             self.feature_importances = {
-                names[i]: round(float(importances[i]), 4)
-                for i in range(len(names))
+                names[i]: round(float(importances[i]), 4) for i in range(len(names))
             }
         except Exception:
             self.feature_importances = {}
 
         self.train_stats = {
-            "trained_at":   datetime.utcnow().isoformat(),
-            "n_samples":    len(X),
-            "n_wins":       n_wins,
-            "n_losses":     n_losses,
-            "win_rate":     round(n_wins / len(X) * 100, 1),
-            "roc_auc":      auc,
-            "brier_score":  brier,
-            "cv_auc_mean":  cv_mean,
-            "cv_auc_std":   cv_std,
-            "top_features": dict(sorted(
-                self.feature_importances.items(),
-                key=lambda x: -x[1]
-            )[:8]),
+            "trained_at": datetime.utcnow().isoformat(),
+            "n_samples": len(X),
+            "n_wins": n_wins,
+            "n_losses": n_losses,
+            "win_rate": round(n_wins / len(X) * 100, 1),
+            "roc_auc": auc,
+            "brier_score": brier,
+            "cv_auc_mean": cv_mean,
+            "cv_auc_std": cv_std,
+            "top_features": dict(
+                sorted(self.feature_importances.items(), key=lambda x: -x[1])[:8]
+            ),
         }
 
         self.save()
 
-        print(f"[ML] Training complete")
+        print("[ML] Training complete")
         print(f"     ROC-AUC    : {auc} (1.0 = perfect)")
         print(f"     CV AUC     : {cv_mean} ± {cv_std}")
         print(f"     Brier score: {brier} (0.0 = perfect)")
@@ -170,17 +167,17 @@ class ConfidenceModel:
 
         try:
             X_scaled = self.scaler.transform(features.reshape(1, -1))
-            prob     = float(self.model.predict_proba(X_scaled)[0][1])
+            prob = float(self.model.predict_proba(X_scaled)[0][1])
         except Exception:
             return self._rule_based_fallback(trade)
 
         tier, action = self._tier(prob)
 
         return {
-            "win_probability":  round(prob, 3),
-            "confidence_tier":  tier,
-            "action":           action,
-            "model_based":      True,
+            "win_probability": round(prob, 3),
+            "confidence_tier": tier,
+            "action": action,
+            "model_based": True,
             "confluence_score": trade.get("confluence_score", 0),
         }
 
@@ -194,30 +191,33 @@ class ConfidenceModel:
         FVG and killzone boost it slightly.
         """
         score = trade.get("confluence_score", 3)
-        base  = 0.40 + (score / 5.0) * 0.45
-        if trade.get("fvg_present"):    base += 0.05
-        if trade.get("ob_present"):     base += 0.03
-        if trade.get("killzone_active"): base += 0.04
+        base = 0.40 + (score / 5.0) * 0.45
+        if trade.get("fvg_present"):
+            base += 0.05
+        if trade.get("ob_present"):
+            base += 0.03
+        if trade.get("killzone_active"):
+            base += 0.04
         prob = min(base, 0.92)
 
         tier, action = self._tier(prob)
         return {
-            "win_probability":  round(prob, 3),
-            "confidence_tier":  tier,
-            "action":           action,
-            "model_based":      False,
+            "win_probability": round(prob, 3),
+            "confidence_tier": tier,
+            "action": action,
+            "model_based": False,
             "confluence_score": score,
         }
 
     def _tier(self, prob: float) -> Tuple[str, str]:
         if prob >= 0.75:
-            return "PREMIUM",  "Take trade — size normally or larger"
+            return "PREMIUM", "Take trade — size normally or larger"
         elif prob >= 0.60:
-            return "HIGH",     "Take trade — standard size"
+            return "HIGH", "Take trade — standard size"
         elif prob >= 0.45:
-            return "MEDIUM",   "Take trade — reduce size or skip"
+            return "MEDIUM", "Take trade — reduce size or skip"
         else:
-            return "LOW",      "Skip — below confidence threshold"
+            return "LOW", "Skip — below confidence threshold"
 
     # ─────────────────────────────────────────────
     # SAVE / LOAD
@@ -225,9 +225,9 @@ class ConfidenceModel:
 
     def save(self):
         payload = {
-            "model":      self.model,
-            "scaler":     self.scaler,
-            "stats":      self.train_stats,
+            "model": self.model,
+            "scaler": self.scaler,
+            "stats": self.train_stats,
             "importances": self.feature_importances,
         }
         with open(self.model_path, "wb") as f:
@@ -240,11 +240,11 @@ class ConfidenceModel:
         try:
             with open(self.model_path, "rb") as f:
                 payload = pickle.load(f)
-            self.model               = payload["model"]
-            self.scaler              = payload["scaler"]
-            self.train_stats         = payload.get("stats", {})
+            self.model = payload["model"]
+            self.scaler = payload["scaler"]
+            self.train_stats = payload.get("stats", {})
             self.feature_importances = payload.get("importances", {})
-            self.is_trained          = True
+            self.is_trained = True
             print(f"[ML] Model loaded from {self.model_path}")
             return True
         except Exception as e:
@@ -261,7 +261,8 @@ class ConfidenceModel:
             return
 
         s = self.train_stats
-        print(f"""
+        print(
+            f"""
 ╔══════════════════════════════════════════════╗
   TRADER COPILOT — ML CONFIDENCE MODEL REPORT
 ╚══════════════════════════════════════════════╝
@@ -274,7 +275,8 @@ class ConfidenceModel:
   CV AUC        : {s.get('cv_auc_mean')} ± {s.get('cv_auc_std')}
   Brier score   : {s.get('brier_score')}  (<0.20 = good calibration)
 
-── Top predictive features ──────────────────────""")
+── Top predictive features ──────────────────────"""
+        )
 
         for feat, imp in list(s.get("top_features", {}).items())[:8]:
             bar = "█" * int(imp * 100)

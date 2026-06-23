@@ -45,6 +45,7 @@ from risk_guard.alerts import format_clear, format_warn, format_block
 
 rg = RiskGuard(env_file=ENV_FILE)
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Print loaded configuration
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,13 +59,23 @@ def _banner():
     print(f"  Firm             : {c.name.upper()}")
     print(f"  Account size     : ${s.account_size:,.2f}")
     print(f"  DB path          : {rg.state_db.db_path}")
-    print(f"  Telegram token   : {'configured' if rg.telegram_token and '<' not in rg.telegram_token else 'PLACEHOLDER — update .env.sbonelo'}")
+    print(
+        f"  Telegram token   : {'configured' if rg.telegram_token and '<' not in rg.telegram_token else 'PLACEHOLDER — update .env.sbonelo'}"
+    )
     print(f"  Telegram chat ID : {rg.telegram_chat_id}")
     print("─" * 60)
-    print(f"  Daily DD limit   : {c.daily_dd_pct}%   (${c.daily_dd_pct/100*s.account_size:,.2f})")
-    print(f"  Soft stop        : {c.internal_soft_stop_pct}%  (${c.internal_soft_stop_pct/100*s.account_size:,.2f})")
-    print(f"  Hard stop        : {c.internal_hard_stop_pct}%  (${c.internal_hard_stop_pct/100*s.account_size:,.2f})")
-    print(f"  Max open risk    : {c.max_open_risk_pct}%  (${c.max_open_risk_pct/100*s.account_size:,.2f})")
+    print(
+        f"  Daily DD limit   : {c.daily_dd_pct}%   (${c.daily_dd_pct/100*s.account_size:,.2f})"
+    )
+    print(
+        f"  Soft stop        : {c.internal_soft_stop_pct}%  (${c.internal_soft_stop_pct/100*s.account_size:,.2f})"
+    )
+    print(
+        f"  Hard stop        : {c.internal_hard_stop_pct}%  (${c.internal_hard_stop_pct/100*s.account_size:,.2f})"
+    )
+    print(
+        f"  Max open risk    : {c.max_open_risk_pct}%  (${c.max_open_risk_pct/100*s.account_size:,.2f})"
+    )
     print(f"  Max trades/day   : {c.max_trades_per_day}")
     print(f"  Min hold         : {c.min_hold_seconds}s")
     print(f"  Rollover         : {c.rollover_time} {c.rollover_tz}")
@@ -84,7 +95,7 @@ def _run_check():
     proposal = TradeProposal(
         firm=rg.config.name,
         account_size=rg.state.account_size,
-        proposed_risk_dollars=75.0,        # 0.5% of 15k
+        proposed_risk_dollars=75.0,  # 0.5% of 15k
         current_daily_pnl=rg.state.daily_pnl,
         open_risk_dollars=0.0,
         trades_today=rg.state.trades_today,
@@ -155,8 +166,11 @@ def _run_monitor():
         print(msg)
         await rg.send_alert(msg)
 
-    def on_block(d): asyncio.run(_on_block(d))
-    def on_warn(d):  asyncio.run(_on_warn(d))
+    def on_block(d):
+        asyncio.run(_on_block(d))
+
+    def on_warn(d):
+        asyncio.run(_on_warn(d))
 
     monitor = RiskGuardMonitor(
         config=rg.config,

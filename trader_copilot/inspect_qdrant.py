@@ -19,12 +19,12 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from sentence_transformers import SentenceTransformer
 
-HOST            = os.getenv("QDRANT_HOST", "localhost")
-PORT            = int(os.getenv("QDRANT_PORT", "6333"))
-COLLECTION      = os.getenv("QDRANT_COLLECTION", "trade_memory")
-MODEL_NAME      = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
-REGIME_SENT     = "trending"          # ← value retrieve_similar() sends
-TEST_QUERY      = "EURUSD sell london breakout retest"
+HOST = os.getenv("QDRANT_HOST", "localhost")
+PORT = int(os.getenv("QDRANT_PORT", "6333"))
+COLLECTION = os.getenv("QDRANT_COLLECTION", "trade_memory")
+MODEL_NAME = os.getenv("QDRANT_MODEL", "all-MiniLM-L6-v2")
+REGIME_SENT = "trending"  # ← value retrieve_similar() sends
+TEST_QUERY = "EURUSD sell london breakout retest"
 
 client = QdrantClient(host=HOST, port=PORT)
 
@@ -58,7 +58,7 @@ print("=" * 60)
 print("FILTER RETRIEVE_SIMILAR() SENDS")
 print("=" * 60)
 f = Filter(must=[FieldCondition(key="regime", match=MatchValue(value=REGIME_SENT))])
-print(f"  key   : 'regime'")
+print("  key   : 'regime'")
 print(f"  value : {REGIME_SENT!r}   (type={type(REGIME_SENT).__name__})")
 
 # ── 3. Live filtered query ───────────────────────────────────────────────────
@@ -67,7 +67,7 @@ print("=" * 60)
 print(f"LIVE TEST  — query_points with regime={REGIME_SENT!r}")
 print("=" * 60)
 
-model  = SentenceTransformer(MODEL_NAME)
+model = SentenceTransformer(MODEL_NAME)
 vector = model.encode(TEST_QUERY, convert_to_numpy=True).tolist()
 
 resp_filtered = client.query_points(
@@ -99,4 +99,6 @@ elif len(resp_filtered.points) > 0:
     print("✅ Filter is working — results returned.")
 else:
     print()
-    print("❌ Both filtered and unfiltered returned 0 — collection may be empty or wrong.")
+    print(
+        "❌ Both filtered and unfiltered returned 0 — collection may be empty or wrong."
+    )

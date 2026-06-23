@@ -35,18 +35,19 @@ import uvicorn
 
 # ── Trade event model ─────────────────────────────────────────────────────────
 
+
 class TradeEvent(BaseModel):
     ticket: int
     symbol: str
-    direction: str          # "BUY" or "SELL"
+    direction: str  # "BUY" or "SELL"
     lot_size: float
     entry_price: float
     sl: float
     tp: float
-    event: str              # "OPEN" or "CLOSE"
+    event: str  # "OPEN" or "CLOSE"
     close_price: Optional[float] = None
     profit: Optional[float] = None
-    timestamp: str          # ISO format
+    timestamp: str  # ISO format
 
 
 # ── Journal database ──────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ _RG_DB_PATH = os.environ.get(
     os.path.join(os.path.dirname(__file__), "risk_guard.db"),
 )
 
-_DB_LOCK = threading.Lock()   # sqlite3 is not thread-safe across connections
+_DB_LOCK = threading.Lock()  # sqlite3 is not thread-safe across connections
 
 
 def _get_conn() -> sqlite3.Connection:
@@ -75,7 +76,8 @@ def _get_conn() -> sqlite3.Connection:
 
 def _ensure_table(conn: sqlite3.Connection) -> None:
     """Create mt5_trades if it doesn't exist. Never touches the existing trades table."""
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS mt5_trades (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket       INTEGER NOT NULL,
@@ -92,26 +94,27 @@ def _ensure_table(conn: sqlite3.Connection) -> None:
             closed_at    TEXT,
             created_at   TEXT    NOT NULL
         )
-    """)
+    """
+    )
     conn.commit()
 
 
 # ── Shared state (written by run_multi, read by /health) ─────────────────────
 _health: dict = {
-    "status":    "starting",
-    "pairs":     0,
-    "cycle":     0,
+    "status": "starting",
+    "pairs": 0,
+    "cycle": 0,
     "last_scan": None,
 }
 
 # ── Risk Guard state (updated by webhook trade events) ────────────────────────
 _state: dict = {
     "risk_guard": {
-        "open_positions":    [],   # list of dicts, one per open trade
-        "open_trade_count":  0,
-        "total_exposure":    0.0,  # sum of lot_size across open positions
+        "open_positions": [],  # list of dicts, one per open trade
+        "open_trade_count": 0,
+        "total_exposure": 0.0,  # sum of lot_size across open positions
         "realized_pnl_today": 0.0,
-        "last_updated":      None,
+        "last_updated": None,
     }
 }
 
@@ -121,44 +124,46 @@ _STATE_LOCK = threading.Lock()
 def _ensure_risk_guard() -> None:
     """Guarantee _state["risk_guard"] has all expected keys (safe to call anytime)."""
     rg = _state.setdefault("risk_guard", {})
-    rg.setdefault("open_positions",     [])
-    rg.setdefault("open_trade_count",   0)
-    rg.setdefault("total_exposure",     0.0)
+    rg.setdefault("open_positions", [])
+    rg.setdefault("open_trade_count", 0)
+    rg.setdefault("total_exposure", 0.0)
     rg.setdefault("realized_pnl_today", 0.0)
-    rg.setdefault("last_updated",       None)
+    rg.setdefault("last_updated", None)
 
 
 def _recalculate_exposure() -> None:
     """Recompute open_trade_count and total_exposure from open_positions."""
     rg = _state["risk_guard"]
     rg["open_trade_count"] = len(rg["open_positions"])
-    rg["total_exposure"]   = round(
-        sum(p["lot_size"] for p in rg["open_positions"]), 2
-    )
+    rg["total_exposure"] = round(sum(p["lot_size"] for p in rg["open_positions"]), 2)
 
 
 def update_health(pairs: int, cycle: int):
     """Call this from run_multi.py after each scan cycle completes."""
-    _health["status"]    = "ok"
-    _health["pairs"]     = pairs
-    _health["cycle"]     = cycle
+    _health["status"] = "ok"
+    _health["pairs"] = pairs
+    _health["cycle"] = cycle
     _health["last_scan"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # ── DB initialisation (runs at process startup via lifespan) ─────────────────
 
+
 def _init_journal_db() -> None:
     """Create the trades + schema_migrations tables if they don't exist."""
     conn = sqlite3.connect(_DB_PATH)
     try:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS schema_migrations (
                 version     INTEGER PRIMARY KEY,
                 description TEXT NOT NULL,
                 applied_at  TEXT DEFAULT (datetime('now'))
             )
-        """)
-        conn.execute("""
+        """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS trades (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 symbol           TEXT NOT NULL,
@@ -182,7 +187,8 @@ def _init_journal_db() -> None:
                 session          TEXT,
                 created_at       TEXT DEFAULT (datetime('now'))
             )
-        """)
+        """
+        )
         # Migration 2 — taken column (ALTER TABLE is idempotent via try/except)
         try:
             conn.execute(
@@ -204,7 +210,8 @@ def _init_risk_guard_db() -> None:
     """Create session_state + session_log tables if they don't exist."""
     conn = sqlite3.connect(_RG_DB_PATH)
     try:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS session_state (
                 id                          INTEGER PRIMARY KEY AUTOINCREMENT,
                 firm                        TEXT    NOT NULL,
@@ -222,8 +229,10 @@ def _init_risk_guard_db() -> None:
                 last_updated                TEXT    NOT NULL,
                 UNIQUE(firm, session_date)
             )
-        """)
-        conn.execute("""
+        """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS session_log (
                 id                  INTEGER PRIMARY KEY AUTOINCREMENT,
                 firm                TEXT    NOT NULL,
@@ -235,7 +244,8 @@ def _init_risk_guard_db() -> None:
                 equity_high         REAL    NOT NULL,
                 logged_at           TEXT    NOT NULL
             )
-        """)
+        """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -245,11 +255,13 @@ def _init_risk_guard_db() -> None:
 
 from contextlib import asynccontextmanager
 
+
 @asynccontextmanager
 async def _lifespan(app_: FastAPI):
     _init_journal_db()
     _init_risk_guard_db()
     yield
+
 
 app = FastAPI(title="Genuvia Edge Health", lifespan=_lifespan)
 
@@ -358,10 +370,15 @@ def receive_trade_event(payload: TradeEvent) -> dict:
                     VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
                     """,
                     (
-                        payload.ticket, payload.symbol, payload.direction,
-                        payload.lot_size, payload.entry_price,
-                        payload.sl, payload.tp,
-                        payload.timestamp, now,
+                        payload.ticket,
+                        payload.symbol,
+                        payload.direction,
+                        payload.lot_size,
+                        payload.entry_price,
+                        payload.sl,
+                        payload.tp,
+                        payload.timestamp,
+                        now,
                     ),
                 )
                 conn.commit()
@@ -379,7 +396,12 @@ def receive_trade_event(payload: TradeEvent) -> dict:
                      WHERE ticket = ?
                        AND status = 'open'
                     """,
-                    (payload.close_price, payload.profit, payload.timestamp, payload.ticket),
+                    (
+                        payload.close_price,
+                        payload.profit,
+                        payload.timestamp,
+                        payload.ticket,
+                    ),
                 )
                 conn.commit()
 
@@ -401,12 +423,18 @@ def receive_trade_event(payload: TradeEvent) -> dict:
                         VALUES (?, ?, ?, ?, ?, ?, ?, 'closed', ?, ?, ?, ?, ?)
                         """,
                         (
-                            payload.ticket, payload.symbol, payload.direction,
-                            payload.lot_size, payload.entry_price,
-                            payload.sl, payload.tp,
+                            payload.ticket,
+                            payload.symbol,
+                            payload.direction,
+                            payload.lot_size,
+                            payload.entry_price,
+                            payload.sl,
+                            payload.tp,
                             payload.timestamp,
-                            payload.close_price, payload.profit,
-                            payload.timestamp, now,
+                            payload.close_price,
+                            payload.profit,
+                            payload.timestamp,
+                            now,
                         ),
                     )
                     conn.commit()
@@ -425,16 +453,18 @@ def receive_trade_event(payload: TradeEvent) -> dict:
         rg = _state["risk_guard"]
 
         if payload.event.upper() == "OPEN":
-            rg["open_positions"].append({
-                "ticket":      payload.ticket,
-                "symbol":      payload.symbol,
-                "direction":   payload.direction,
-                "lot_size":    payload.lot_size,
-                "entry_price": payload.entry_price,
-                "sl":          payload.sl,
-                "tp":          payload.tp,
-                "opened_at":   payload.timestamp,
-            })
+            rg["open_positions"].append(
+                {
+                    "ticket": payload.ticket,
+                    "symbol": payload.symbol,
+                    "direction": payload.direction,
+                    "lot_size": payload.lot_size,
+                    "entry_price": payload.entry_price,
+                    "sl": payload.sl,
+                    "tp": payload.tp,
+                    "opened_at": payload.timestamp,
+                }
+            )
         else:  # CLOSE
             rg["open_positions"] = [
                 p for p in rg["open_positions"] if p["ticket"] != payload.ticket
@@ -461,6 +491,7 @@ def health() -> JSONResponse:
 
 
 # ── DB table-discovery helpers ────────────────────────────────────────────────
+
 
 def _list_tables(db_path: str) -> list[str]:
     """Return all user table names in the given SQLite database."""
@@ -491,11 +522,12 @@ def _resolve_table(db_path: str, candidates: list[str]) -> Optional[str]:
 
 # Known aliases for each logical table — ordered most-likely-first.
 # If Railway uses a different name, add it here.
-_RG_SESSION_CANDIDATES   = ["session_state", "rg_session_state", "risk_guard_session"]
+_RG_SESSION_CANDIDATES = ["session_state", "rg_session_state", "risk_guard_session"]
 _JOURNAL_SIGNAL_CANDIDATES = ["trades", "signals", "trade_signals", "journal_trades"]
 
 
 # ── GET /debug/tables ─────────────────────────────────────────────────────────
+
 
 @app.get("/debug/tables")
 def debug_tables() -> JSONResponse:
@@ -503,6 +535,7 @@ def debug_tables() -> JSONResponse:
     Diagnostic: list every table in both SQLite databases plus the resolved paths.
     Use this to confirm the correct table names on Railway.
     """
+
     def _describe(db_path: str) -> dict:
         tables = {}
         try:
@@ -521,13 +554,16 @@ def debug_tables() -> JSONResponse:
         except Exception as exc:
             return {"path": db_path, "exists": False, "error": str(exc), "tables": {}}
 
-    return JSONResponse({
-        "risk_guard_db":  _describe(_RG_DB_PATH),
-        "journal_db":     _describe(_DB_PATH),
-    })
+    return JSONResponse(
+        {
+            "risk_guard_db": _describe(_RG_DB_PATH),
+            "journal_db": _describe(_DB_PATH),
+        }
+    )
 
 
 # ── GET /risk-guard/state ─────────────────────────────────────────────────────
+
 
 @app.get("/risk-guard/state")
 def risk_guard_state() -> JSONResponse:
@@ -540,10 +576,12 @@ def risk_guard_state() -> JSONResponse:
     if tbl is None:
         actual = _list_tables(_RG_DB_PATH)
         return JSONResponse(
-            {"error": "session_state table not found",
-             "db_path": _RG_DB_PATH,
-             "tables_found": actual,
-             "hint": "Call GET /debug/tables to inspect the database"},
+            {
+                "error": "session_state table not found",
+                "db_path": _RG_DB_PATH,
+                "tables_found": actual,
+                "hint": "Call GET /debug/tables to inspect the database",
+            },
             status_code=500,
         )
 
@@ -563,11 +601,11 @@ def risk_guard_state() -> JSONResponse:
         return JSONResponse({"error": "No session state found"}, status_code=404)
 
     row = dict(row)
-    account_size     = row["account_size"]
+    account_size = row["account_size"]
     starting_balance = row["starting_balance"]
-    daily_pnl        = row["daily_pnl"]
-    balance          = round(starting_balance + daily_pnl, 2)
-    daily_loss_pct   = round(daily_pnl / account_size * 100.0, 4) if account_size else 0.0
+    daily_pnl = row["daily_pnl"]
+    balance = round(starting_balance + daily_pnl, 2)
+    daily_loss_pct = round(daily_pnl / account_size * 100.0, 4) if account_size else 0.0
 
     violations: list[str] = []
     if row["session_locked"]:
@@ -580,7 +618,9 @@ def risk_guard_state() -> JSONResponse:
                 unlock_dt = datetime.fromisoformat(revenge_until)
                 if datetime.utcnow() < unlock_dt:
                     gate_status = "BLOCK"
-                    violations.append(f"revenge_lock_active: trading resumes after {revenge_until}")
+                    violations.append(
+                        f"revenge_lock_active: trading resumes after {revenge_until}"
+                    )
                 else:
                     gate_status = "ALLOW"
             except (ValueError, TypeError):
@@ -591,41 +631,50 @@ def risk_guard_state() -> JSONResponse:
     if row.get("session_ended_via_hard_stop"):
         violations.append("prior_hard_stop: previous session ended via hard stop")
 
-    return JSONResponse({
-        "firm":               row["firm"],
-        "session_date":       row["session_date"],
-        "account_size":       account_size,
-        "balance":            balance,
-        "daily_pnl":          round(daily_pnl, 2),
-        "daily_loss_pct":     daily_loss_pct,
-        "equity_high":        row["equity_high"],
-        "trades_today":       row["trades_today"],
-        "cumulative_pnl":     round(row["cumulative_pnl"], 2),
-        "valid_trading_days": row["valid_trading_days"],
-        "gate_status":        gate_status,
-        "prop_firm_violations": violations,
-        "last_updated":       row["last_updated"],
-        "_table":             tbl,
-    })
+    return JSONResponse(
+        {
+            "firm": row["firm"],
+            "session_date": row["session_date"],
+            "account_size": account_size,
+            "balance": balance,
+            "daily_pnl": round(daily_pnl, 2),
+            "daily_loss_pct": daily_loss_pct,
+            "equity_high": row["equity_high"],
+            "trades_today": row["trades_today"],
+            "cumulative_pnl": round(row["cumulative_pnl"], 2),
+            "valid_trading_days": row["valid_trading_days"],
+            "gate_status": gate_status,
+            "prop_firm_violations": violations,
+            "last_updated": row["last_updated"],
+            "_table": tbl,
+        }
+    )
 
 
 # ── GET /signals ──────────────────────────────────────────────────────────────
 
+
 @app.get("/signals")
 def get_signals(
-    symbol: Optional[str] = Query(default=None, description="Filter by symbol, e.g. EURUSD"),
-    date: Optional[str]   = Query(default=None, description="Filter by signal date YYYY-MM-DD"),
-    limit: int            = Query(default=20, ge=1, le=500, description="Max rows to return"),
+    symbol: Optional[str] = Query(
+        default=None, description="Filter by symbol, e.g. EURUSD"
+    ),
+    date: Optional[str] = Query(
+        default=None, description="Filter by signal date YYYY-MM-DD"
+    ),
+    limit: int = Query(default=20, ge=1, le=500, description="Max rows to return"),
 ) -> JSONResponse:
     """Return recent signals from the journal database with optional filters."""
     tbl = _resolve_table(_DB_PATH, _JOURNAL_SIGNAL_CANDIDATES)
     if tbl is None:
         actual = _list_tables(_DB_PATH)
         return JSONResponse(
-            {"error": "signals/trades table not found",
-             "db_path": _DB_PATH,
-             "tables_found": actual,
-             "hint": "Call GET /debug/tables to inspect the database"},
+            {
+                "error": "signals/trades table not found",
+                "db_path": _DB_PATH,
+                "tables_found": actual,
+                "hint": "Call GET /debug/tables to inspect the database",
+            },
             status_code=500,
         )
 
@@ -660,6 +709,7 @@ def get_signals(
 
 # ── GET /journal/summary ──────────────────────────────────────────────────────
 
+
 @app.get("/journal/summary")
 def journal_summary() -> JSONResponse:
     """
@@ -670,10 +720,12 @@ def journal_summary() -> JSONResponse:
     if tbl is None:
         actual = _list_tables(_DB_PATH)
         return JSONResponse(
-            {"error": "signals/trades table not found",
-             "db_path": _DB_PATH,
-             "tables_found": actual,
-             "hint": "Call GET /debug/tables to inspect the database"},
+            {
+                "error": "signals/trades table not found",
+                "db_path": _DB_PATH,
+                "tables_found": actual,
+                "hint": "Call GET /debug/tables to inspect the database",
+            },
             status_code=500,
         )
 
@@ -684,7 +736,9 @@ def journal_summary() -> JSONResponse:
         conn = sqlite3.connect(_DB_PATH)
         conn.row_factory = sqlite3.Row
         try:
-            col_names = {c[1] for c in conn.execute(f"PRAGMA table_info({tbl})").fetchall()}
+            col_names = {
+                c[1] for c in conn.execute(f"PRAGMA table_info({tbl})").fetchall()
+            }
             if "taken" in col_names:
                 rows = conn.execute(
                     f"SELECT outcome, pattern, pnl_rr FROM {tbl} "
@@ -725,20 +779,23 @@ def journal_summary() -> JSONResponse:
     total = len(rows)
     avg_rr = round(sum(rr_values) / len(rr_values), 3) if rr_values else None
 
-    return JSONResponse({
-        "session_date":     today_str,
-        "total_trades":     total,
-        "wins":             wins,
-        "losses":           losses,
-        "breakevens":       breakevens,
-        "pending":          total - wins - losses - breakevens,
-        "setups_triggered": setups,
-        "average_rr":       avg_rr,
-        "_table":           tbl,
-    })
+    return JSONResponse(
+        {
+            "session_date": today_str,
+            "total_trades": total,
+            "wins": wins,
+            "losses": losses,
+            "breakevens": breakevens,
+            "pending": total - wins - losses - breakevens,
+            "setups_triggered": setups,
+            "average_rr": avg_rr,
+            "_table": tbl,
+        }
+    )
 
 
 # ── Background thread launcher ────────────────────────────────────────────────
+
 
 def start_health_server(port: int = 8080):
     """
@@ -750,6 +807,7 @@ def start_health_server(port: int = 8080):
         # ... in the cycle loop:
         update_health(pairs=len(pairs), cycle=cycle)
     """
+
     def _run():
         uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 

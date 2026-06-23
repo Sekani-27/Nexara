@@ -53,51 +53,51 @@ _BASE = "https://api.twelvedata.com/time_series"
 # ── Internal symbol → TwelveData symbol ──────────────────────────────────────
 SYMBOL_MAP: dict = {
     # ── Active runner pairs ───────────────────────────────────────────────────
-    "EURUSDm":     "EUR/USD",
-    "GBPUSDm":     "GBP/USD",
-    "EURAUDm":     "EUR/AUD",
-    "EURCADm":     "EUR/CAD",
-    "CADJPYm":     "CAD/JPY",
-    "GBPCADm":     "GBP/CAD",
-    "XAUUSDm":     "XAU/USD",   # Gold spot
-    "USTEC_x100m": "QQQ",       # Nasdaq-100 (QQQ ETF — NDX requires paid tier)
+    "EURUSDm": "EUR/USD",
+    "GBPUSDm": "GBP/USD",
+    "EURAUDm": "EUR/AUD",
+    "EURCADm": "EUR/CAD",
+    "CADJPYm": "CAD/JPY",
+    "GBPCADm": "GBP/CAD",
+    "XAUUSDm": "XAU/USD",  # Gold spot
+    "USTEC_x100m": "QQQ",  # Nasdaq-100 (QQQ ETF — NDX requires paid tier)
     # ── Additional PAIR_CONFIGS entries ──────────────────────────────────────
-    "USDJPYm":     "USD/JPY",
-    "USDCHFm":     "USD/CHF",
-    "AUDUSDm":     "AUD/USD",
-    "USDCADm":     "USD/CAD",
-    "NZDUSDm":     "NZD/USD",
-    "EURGBPm":     "EUR/GBP",
-    "EURJPYm":     "EUR/JPY",
-    "EURCHFm":     "EUR/CHF",
-    "EURNZDm":     "EUR/NZD",
-    "GBPJPYm":     "GBP/JPY",
-    "GBPCHFm":     "GBP/CHF",
-    "GBPAUDm":     "GBP/AUD",
-    "GBPNZDm":     "GBP/NZD",
-    "AUDJPYm":     "AUD/JPY",
-    "CHFJPYm":     "CHF/JPY",
-    "NZDJPYm":     "NZD/JPY",
-    "AUDCADm":     "AUD/CAD",
-    "USDZARm":     "USD/ZAR",
+    "USDJPYm": "USD/JPY",
+    "USDCHFm": "USD/CHF",
+    "AUDUSDm": "AUD/USD",
+    "USDCADm": "USD/CAD",
+    "NZDUSDm": "NZD/USD",
+    "EURGBPm": "EUR/GBP",
+    "EURJPYm": "EUR/JPY",
+    "EURCHFm": "EUR/CHF",
+    "EURNZDm": "EUR/NZD",
+    "GBPJPYm": "GBP/JPY",
+    "GBPCHFm": "GBP/CHF",
+    "GBPAUDm": "GBP/AUD",
+    "GBPNZDm": "GBP/NZD",
+    "AUDJPYm": "AUD/JPY",
+    "CHFJPYm": "CHF/JPY",
+    "NZDJPYm": "NZD/JPY",
+    "AUDCADm": "AUD/CAD",
+    "USDZARm": "USD/ZAR",
     # ── Bare-symbol aliases (used by run_multi ALL_PAIRS) ─────────────────────
-    "XAUUSD":      "XAU/USD",
-    "EURUSD":      "EUR/USD",
-    "GBPUSD":      "GBP/USD",
-    "USDJPY":      "USD/JPY",
-    "GBPJPY":      "GBP/JPY",
-    "CADJPY":      "CAD/JPY",
+    "XAUUSD": "XAU/USD",
+    "EURUSD": "EUR/USD",
+    "GBPUSD": "GBP/USD",
+    "USDJPY": "USD/JPY",
+    "GBPJPY": "GBP/JPY",
+    "CADJPY": "CAD/JPY",
 }
 
 # ── Internal timeframe → TwelveData interval string ──────────────────────────
 TF_MAP: dict = {
-    "1M":  "1min",
-    "5M":  "5min",
+    "1M": "1min",
+    "5M": "5min",
     "15M": "15min",
     "30M": "30min",
-    "1H":  "1h",
-    "4H":  "4h",
-    "D":   "1day",
+    "1H": "1h",
+    "4H": "4h",
+    "D": "1day",
 }
 
 
@@ -122,10 +122,10 @@ class TwelveDataConnector:
 
     def __init__(
         self,
-        api_key:   Optional[str] = None,
+        api_key: Optional[str] = None,
         api_key_2: Optional[str] = None,
     ):
-        self.api_key   = api_key   or os.getenv("TWELVEDATA_API_KEY",   "")
+        self.api_key = api_key or os.getenv("TWELVEDATA_API_KEY", "")
         self.api_key_2 = api_key_2 or os.getenv("TWELVEDATA_API_KEY_2", "")
 
         # Build a round-robin cycle over available keys.
@@ -134,8 +134,10 @@ class TwelveDataConnector:
         _available = [k for k in [self.api_key, self.api_key_2] if k]
         self._key_cycle = cycle(_available) if _available else cycle([""])
         self._key_labels = {}
-        if self.api_key:   self._key_labels[self.api_key]   = "key1"
-        if self.api_key_2: self._key_labels[self.api_key_2] = "key2"
+        if self.api_key:
+            self._key_labels[self.api_key] = "key1"
+        if self.api_key_2:
+            self._key_labels[self.api_key_2] = "key2"
 
         if not self.api_key:
             log.warning(
@@ -145,10 +147,14 @@ class TwelveDataConnector:
         if self.api_key_2:
             log.info(
                 "[TwelveData] Dual-key mode — key1=...%s  key2=...%s",
-                self.api_key[-6:], self.api_key_2[-6:],
+                self.api_key[-6:],
+                self.api_key_2[-6:],
             )
         else:
-            log.info("[TwelveData] Single-key mode — key1=...%s", self.api_key[-6:] if self.api_key else "unset")
+            log.info(
+                "[TwelveData] Single-key mode — key1=...%s",
+                self.api_key[-6:] if self.api_key else "unset",
+            )
 
     # ─────────────────────────────────────────────
     # PRIMARY: get_candles
@@ -184,18 +190,20 @@ class TwelveDataConnector:
         # Advance the round-robin cycle and pick the next key.
         # next() is called unconditionally — before any early-return path —
         # so the cycle always rotates whether the request succeeds or fails.
-        use_key   = next(self._key_cycle)
+        use_key = next(self._key_cycle)
         key_label = self._key_labels.get(use_key, "key?")
 
-        params = urllib.parse.urlencode({
-            "symbol":     td_symbol,
-            "interval":   interval,
-            "outputsize": count,
-            "apikey":     use_key,
-            "order":      "ASC",          # oldest first — same as MT5
-            "timezone":   "UTC",
-            "format":     "JSON",
-        })
+        params = urllib.parse.urlencode(
+            {
+                "symbol": td_symbol,
+                "interval": interval,
+                "outputsize": count,
+                "apikey": use_key,
+                "order": "ASC",  # oldest first — same as MT5
+                "timezone": "UTC",
+                "format": "JSON",
+            }
+        )
         url = f"{_BASE}?{params}"
 
         log.debug("[TwelveData] GET %s [%s]", url.replace(use_key, "***"), key_label)
@@ -214,16 +222,15 @@ class TwelveDataConnector:
         if data.get("status") == "error" or "code" in data:
             log.warning(
                 "[TwelveData] API error for %s %s — %s",
-                symbol, timeframe,
+                symbol,
+                timeframe,
                 data.get("message", data),
             )
             return []
 
         values = data.get("values")
         if not values:
-            log.warning(
-                "[TwelveData] 0 bars returned for %s %s", symbol, timeframe
-            )
+            log.warning("[TwelveData] 0 bars returned for %s %s", symbol, timeframe)
             return []
 
         candles: List[Candle] = []
@@ -236,24 +243,31 @@ class TwelveDataConnector:
                 except ValueError:
                     ts = datetime.strptime(raw_dt, "%Y-%m-%d")
 
-                candles.append(Candle(
-                    timestamp=ts,
-                    open=float(bar["open"]),
-                    high=float(bar["high"]),
-                    low=float(bar["low"]),
-                    close=float(bar["close"]),
-                    volume=float(bar.get("volume") or 0.0),
-                    timeframe=timeframe,
-                ))
+                candles.append(
+                    Candle(
+                        timestamp=ts,
+                        open=float(bar["open"]),
+                        high=float(bar["high"]),
+                        low=float(bar["low"]),
+                        close=float(bar["close"]),
+                        volume=float(bar.get("volume") or 0.0),
+                        timeframe=timeframe,
+                    )
+                )
             except (KeyError, ValueError) as exc:
                 log.debug("[TwelveData] Skipping malformed bar: %s — %s", bar, exc)
 
         log.info(
             "[TwelveData/%s] %-12s %-4s — %d candles (latest: %s)",
-            key_label, symbol, timeframe, len(candles),
+            key_label,
+            symbol,
+            timeframe,
+            len(candles),
             candles[-1].timestamp.strftime("%Y-%m-%d %H:%M") if candles else "—",
         )
-        time.sleep(4)     # 18 calls × 4s = 72s/cycle; each key sees 9 calls, one every 8s < 7.5s/req limit
+        time.sleep(
+            4
+        )  # 18 calls × 4s = 72s/cycle; each key sees 9 calls, one every 8s < 7.5s/req limit
         return candles
 
     # ─────────────────────────────────────────────

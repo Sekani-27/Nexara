@@ -46,16 +46,21 @@ from typing import Any, Optional
 
 from dotenv import load_dotenv
 from telegram import Bot, Update
-from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 # ── env ──────────────────────────────────────────────────────────────────────
 # Always resolve .env relative to this file so the feed can be launched
 # from any working directory.
 load_dotenv(Path(__file__).parent / ".env")
 
-_TOKEN:        str | None = os.getenv("TELEGRAM_BOT_TOKEN")
-_CHAT_ID:      str | None = os.getenv("TELEGRAM_CHAT_ID")
+_TOKEN: str | None = os.getenv("TELEGRAM_BOT_TOKEN")
+_CHAT_ID: str | None = os.getenv("TELEGRAM_CHAT_ID")
 _GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
 
 log = logging.getLogger(__name__)
@@ -68,27 +73,46 @@ log = logging.getLogger(__name__)
 
 _PAIR_ALIASES: dict[str, str] = {
     # ── Majors ──
-    "EURUSD": "EURUSD", "GBPUSD": "GBPUSD", "USDJPY": "USDJPY",
-    "USDCHF": "USDCHF", "AUDUSD": "AUDUSD", "USDCAD": "USDCAD",
+    "EURUSD": "EURUSD",
+    "GBPUSD": "GBPUSD",
+    "USDJPY": "USDJPY",
+    "USDCHF": "USDCHF",
+    "AUDUSD": "AUDUSD",
+    "USDCAD": "USDCAD",
     "NZDUSD": "NZDUSD",
     # ── Euro crosses ──
-    "EURGBP": "EURGBP", "EURJPY": "EURJPY", "EURCHF": "EURCHF",
-    "EURAUD": "EURAUD", "EURCAD": "EURCAD", "EURNZD": "EURNZD",
+    "EURGBP": "EURGBP",
+    "EURJPY": "EURJPY",
+    "EURCHF": "EURCHF",
+    "EURAUD": "EURAUD",
+    "EURCAD": "EURCAD",
+    "EURNZD": "EURNZD",
     # ── Pound crosses ──
-    "GBPJPY": "GBPJPY", "GBPCHF": "GBPCHF", "GBPAUD": "GBPAUD",
-    "GBPCAD": "GBPCAD", "GBPNZD": "GBPNZD",
+    "GBPJPY": "GBPJPY",
+    "GBPCHF": "GBPCHF",
+    "GBPAUD": "GBPAUD",
+    "GBPCAD": "GBPCAD",
+    "GBPNZD": "GBPNZD",
     # ── Yen crosses ──
-    "AUDJPY": "AUDJPY", "CADJPY": "CADJPY", "CHFJPY": "CHFJPY",
+    "AUDJPY": "AUDJPY",
+    "CADJPY": "CADJPY",
+    "CHFJPY": "CHFJPY",
     "NZDJPY": "NZDJPY",
     # ── Exotics ──
     "USDZAR": "USDZAR",
     # ── Commodities / indices ──
-    "XAUUSD": "XAUUSD", "NAS100": "NAS100",
+    "XAUUSD": "XAUUSD",
+    "NAS100": "NAS100",
     # ── Common aliases ──
-    "GOLD":   "XAUUSD", "XAU":    "XAUUSD",
-    "NASDAQ": "NAS100", "US100":  "NAS100", "NAS": "NAS100",
-    "US30":   "US30",   "DOW":    "US30",
-    "US500":  "US500",  "SPX":    "US500",
+    "GOLD": "XAUUSD",
+    "XAU": "XAUUSD",
+    "NASDAQ": "NAS100",
+    "US100": "NAS100",
+    "NAS": "NAS100",
+    "US30": "US30",
+    "DOW": "US30",
+    "US500": "US500",
+    "SPX": "US500",
 }
 
 # Active pairs the scanner currently watches
@@ -98,6 +122,7 @@ _ACTIVE_PAIRS = ["XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "GBPJPY", "CADJPY"]
 # ─────────────────────────────────────────────────────────────────────────────
 # ORIGINAL HELPERS  (unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _bot_ready() -> bool:
     """Return True only when both credentials are present."""
@@ -135,27 +160,27 @@ def _build_alert_text(alert: dict[str, Any]) -> str:
         memory        str     e.g. "9 similar — 8W 1L. ..."
         news_warning  str     e.g. "CPI in 47min — reduce size"
     """
-    symbol     = alert.get("symbol", "—")
-    direction  = str(alert.get("direction", "—")).upper()
-    pattern    = alert.get("pattern", "—")
-    session    = alert.get("session", "—")
+    symbol = alert.get("symbol", "—")
+    direction = str(alert.get("direction", "—")).upper()
+    pattern = alert.get("pattern", "—")
+    session = alert.get("session", "—")
     confidence = int(alert.get("confidence", 0))
-    entry      = alert.get("entry")
-    sl         = alert.get("stop_loss")
-    tp         = alert.get("take_profit")
-    rr_val     = alert.get("rr", "—")
-    why        = alert.get("why", "—")
-    memory     = alert.get("memory", "—")
-    news_warn  = alert.get("news_warning", "")
+    entry = alert.get("entry")
+    sl = alert.get("stop_loss")
+    tp = alert.get("take_profit")
+    rr_val = alert.get("rr", "—")
+    why = alert.get("why", "—")
+    memory = alert.get("memory", "—")
+    news_warn = alert.get("news_warning", "")
 
-    emoji  = "🟢" if direction == "BUY" else "🔴"
-    grade  = _grade_label(confidence)
-    div    = "━━━━━━━━━━━━━━━━━━━━"
+    emoji = "🟢" if direction == "BUY" else "🔴"
+    grade = _grade_label(confidence)
+    div = "━━━━━━━━━━━━━━━━━━━━"
 
     entry_str = f"{entry:.4f}" if isinstance(entry, (int, float)) else str(entry or "—")
-    sl_str    = f"{sl:.4f}"    if isinstance(sl,    (int, float)) else str(sl    or "—")
-    tp_str    = f"{tp:.4f}"    if isinstance(tp,    (int, float)) else str(tp    or "—")
-    rr_str    = f"1 : {rr_val}" if rr_val != "—" else "—"
+    sl_str = f"{sl:.4f}" if isinstance(sl, (int, float)) else str(sl or "—")
+    tp_str = f"{tp:.4f}" if isinstance(tp, (int, float)) else str(tp or "—")
+    rr_str = f"1 : {rr_val}" if rr_val != "—" else "—"
 
     lines = [
         f"{emoji} {symbol} — {direction}",
@@ -181,22 +206,25 @@ def _build_alert_text(alert: dict[str, Any]) -> str:
 
 
 def _build_startup_text(symbols: list[str]) -> str:
-    div   = "━━━━━━━━━━━━━━━━━━━━"
+    div = "━━━━━━━━━━━━━━━━━━━━"
     count = len(symbols)
-    return "\n".join([
-        "🤖 Trader Copilot is live",
-        div,
-        f"Watching: {count} symbol{'s' if count != 1 else ''}",
-        "Memory:   Qdrant active",
-        "Mode:     Alert only",
-        div,
-        "Waiting for setups...",
-    ])
+    return "\n".join(
+        [
+            "🤖 Trader Copilot is live",
+            div,
+            f"Watching: {count} symbol{'s' if count != 1 else ''}",
+            "Memory:   Qdrant active",
+            "Mode:     Alert only",
+            div,
+            "Waiting for setups...",
+        ]
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SESSION / MARKET HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _current_session_label() -> str:
     """Return the active trading session name for the current UTC time."""
@@ -228,37 +256,40 @@ def _market_is_open() -> bool:
 # DATA FETCHERS  (all defensive — return empty/default on any error)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _fetch_rg_state(env_file: Optional[str] = None) -> Optional[dict]:
     """
     Load a RiskGuard session state snapshot as a plain dict.
     Returns None if the risk_guard package or DB is unavailable.
     """
     try:
-        import sys, os as _os
+        import sys
+
         # Ensure project root is on the path so 'risk_guard' can be imported
         _root = str(Path(__file__).parent.parent)
         if _root not in sys.path:
             sys.path.insert(0, _root)
 
         from risk_guard import RiskGuard
+
         rg = RiskGuard(env_file=env_file)
-        s  = rg.state
-        c  = rg.config
+        s = rg.state
+        c = rg.config
         return {
-            "firm":              c.name.upper(),
-            "account_size":      s.account_size,
-            "session_date":      s.session_date,
-            "daily_pnl":         s.daily_pnl,
-            "trades_today":      s.trades_today,
-            "max_trades":        c.max_trades_per_day,
-            "session_locked":    s.session_locked,
-            "equity_high":       s.equity_high,
-            "starting_balance":  s.starting_balance,
-            "cumulative_pnl":    s.cumulative_pnl,
-            "valid_days":        s.valid_trading_days,
-            "soft_stop_pct":     c.internal_soft_stop_pct,
-            "hard_stop_pct":     c.internal_hard_stop_pct,
-            "daily_dd_pct":      c.daily_dd_pct,
+            "firm": c.name.upper(),
+            "account_size": s.account_size,
+            "session_date": s.session_date,
+            "daily_pnl": s.daily_pnl,
+            "trades_today": s.trades_today,
+            "max_trades": c.max_trades_per_day,
+            "session_locked": s.session_locked,
+            "equity_high": s.equity_high,
+            "starting_balance": s.starting_balance,
+            "cumulative_pnl": s.cumulative_pnl,
+            "valid_days": s.valid_trading_days,
+            "soft_stop_pct": c.internal_soft_stop_pct,
+            "hard_stop_pct": c.internal_hard_stop_pct,
+            "daily_dd_pct": c.daily_dd_pct,
             "revenge_locked_until": s.revenge_locked_until,
         }
     except Exception as exc:
@@ -270,11 +301,13 @@ def _fetch_journal_stats(symbol: Optional[str] = None) -> dict:
     """Return journal stats dict. Empty dict on any error."""
     try:
         import sys
+
         _root = str(Path(__file__).parent.parent)
         if _root not in sys.path:
             sys.path.insert(0, _root)
 
         from trader_copilot.journal.trade_journal import TradeJournal
+
         db_path = os.getenv("TRADE_JOURNAL_DB_PATH", "trader_copilot_journal.db")
         j = TradeJournal(db_path=db_path)
         return j.get_stats(symbol=symbol)
@@ -287,11 +320,13 @@ def _fetch_pending_signals() -> list[dict]:
     """Return list of pending (unresolved) trades from journal."""
     try:
         import sys
+
         _root = str(Path(__file__).parent.parent)
         if _root not in sys.path:
             sys.path.insert(0, _root)
 
         from trader_copilot.journal.trade_journal import TradeJournal
+
         db_path = os.getenv("TRADE_JOURNAL_DB_PATH", "trader_copilot_journal.db")
         j = TradeJournal(db_path=db_path)
         return j.get_pending()
@@ -304,13 +339,15 @@ def _fetch_recent_for_pair(symbol: str, limit: int = 5) -> list[dict]:
     """Return the most recent journal entries for a specific symbol."""
     try:
         import sys
+
         _root = str(Path(__file__).parent.parent)
         if _root not in sys.path:
             sys.path.insert(0, _root)
 
         from trader_copilot.journal.trade_journal import TradeJournal
+
         db_path = os.getenv("TRADE_JOURNAL_DB_PATH", "trader_copilot_journal.db")
-        j  = TradeJournal(db_path=db_path)
+        j = TradeJournal(db_path=db_path)
         rows = j.get_by_symbol(symbol)
         return rows[:limit]
     except Exception as exc:
@@ -322,17 +359,17 @@ def _fetch_recent_for_pair(symbol: str, limit: int = 5) -> list[dict]:
 # RESPONSE BUILDERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-_DIV  = "━━━━━━━━━━━━━━━━━━━━"
+_DIV = "━━━━━━━━━━━━━━━━━━━━"
 _DIV2 = "────────────────────"
 
 
 def _build_briefing() -> str:
     """Morning / session briefing."""
-    now     = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
     session = _current_session_label()
-    status  = "🟢 OPEN" if _market_is_open() else "🔴 CLOSED"
-    rg      = _fetch_rg_state()          # default account
-    rg_sb   = _fetch_rg_state(".env.sbonelo")   # Sbonelo account
+    status = "🟢 OPEN" if _market_is_open() else "🔴 CLOSED"
+    rg = _fetch_rg_state()  # default account
+    rg_sb = _fetch_rg_state(".env.sbonelo")  # Sbonelo account
 
     lines = [
         "🌅 TRADER COPILOT — MORNING BRIEFING",
@@ -348,7 +385,7 @@ def _build_briefing() -> str:
     # Risk Guard snapshot — default account
     if rg:
         pnl_sign = "+" if rg["daily_pnl"] >= 0 else ""
-        locked   = "🔒 LOCKED" if rg["session_locked"] else "✅ active"
+        locked = "🔒 LOCKED" if rg["session_locked"] else "✅ active"
         lines += [
             f"ACCOUNT ({rg['firm']})",
             f"  Session PnL  : {pnl_sign}{rg['daily_pnl']:.2f}",
@@ -361,7 +398,7 @@ def _build_briefing() -> str:
     # Sbonelo account
     if rg_sb:
         pnl_sign = "+" if rg_sb["daily_pnl"] >= 0 else ""
-        locked   = "🔒 LOCKED" if rg_sb["session_locked"] else "✅ active"
+        locked = "🔒 LOCKED" if rg_sb["session_locked"] else "✅ active"
         lines += [
             _DIV2,
             f"SBONELO ({rg_sb['firm']})",
@@ -375,14 +412,16 @@ def _build_briefing() -> str:
     lines.append(_DIV)
     if pending:
         lines.append(f"ACTIVE SETUPS  : {len(pending)} pending")
-        for s in pending[:3]:   # show at most 3
+        for s in pending[:3]:  # show at most 3
             dir_emoji = "🟢" if s.get("direction") == "bullish" else "🔴"
             lines.append(
                 f"  {dir_emoji} {s.get('symbol','?')} — {s.get('pattern','?')} "
                 f"| entry {s.get('entry_price', 0):.5f}"
             )
         if len(pending) > 3:
-            lines.append(f"  …and {len(pending) - 3} more. Type 'signals' for full list.")
+            lines.append(
+                f"  …and {len(pending) - 3} more. Type 'signals' for full list."
+            )
     else:
         lines.append("ACTIVE SETUPS  : none pending")
 
@@ -392,17 +431,19 @@ def _build_briefing() -> str:
 
 def _build_account_summary() -> str:
     """Account / equity state for both instances."""
-    rg    = _fetch_rg_state()
+    rg = _fetch_rg_state()
     rg_sb = _fetch_rg_state(".env.sbonelo")
     lines = ["💼 ACCOUNT STATE", _DIV]
 
     def _rg_block(label: str, r: dict) -> list[str]:
-        pnl_sign    = "+" if r["daily_pnl"] >= 0 else ""
-        cum_sign    = "+" if r["cumulative_pnl"] >= 0 else ""
-        locked      = "🔒 SESSION LOCKED" if r["session_locked"] else "✅ Trading"
-        soft_floor  = r["account_size"] * r["soft_stop_pct"] / 100
-        hard_floor  = r["account_size"] * r["hard_stop_pct"] / 100
-        dd_used_pct = abs(r["daily_pnl"]) / r["account_size"] * 100 if r["daily_pnl"] < 0 else 0
+        pnl_sign = "+" if r["daily_pnl"] >= 0 else ""
+        cum_sign = "+" if r["cumulative_pnl"] >= 0 else ""
+        locked = "🔒 SESSION LOCKED" if r["session_locked"] else "✅ Trading"
+        _soft_floor = r["account_size"] * r["soft_stop_pct"] / 100
+        _hard_floor = r["account_size"] * r["hard_stop_pct"] / 100
+        dd_used_pct = (
+            abs(r["daily_pnl"]) / r["account_size"] * 100 if r["daily_pnl"] < 0 else 0
+        )
         return [
             f"{label}  ({r['firm']})",
             f"  Account      : ${r['account_size']:,.0f}",
@@ -434,7 +475,7 @@ def _build_account_summary() -> str:
 def _build_signals_summary() -> str:
     """Active / pending signals from journal."""
     pending = _fetch_pending_signals()
-    lines   = ["📡 ACTIVE SETUPS", _DIV]
+    lines = ["📡 ACTIVE SETUPS", _DIV]
 
     if not pending:
         lines.append("No pending setups in journal.")
@@ -461,13 +502,15 @@ def _build_signals_summary() -> str:
 
 def _build_risk_guard_summary() -> str:
     """Risk Guard fence status for both accounts."""
-    rg    = _fetch_rg_state()
+    rg = _fetch_rg_state()
     rg_sb = _fetch_rg_state(".env.sbonelo")
-    now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = ["🛡 RISK GUARD STATUS", _DIV, f"As of {now}", _DIV]
 
     def _fence_block(label: str, r: dict) -> list[str]:
-        daily_loss_pct = abs(r["daily_pnl"]) / r["account_size"] * 100 if r["daily_pnl"] < 0 else 0
+        daily_loss_pct = (
+            abs(r["daily_pnl"]) / r["account_size"] * 100 if r["daily_pnl"] < 0 else 0
+        )
         soft_hit = daily_loss_pct >= r["soft_stop_pct"]
         hard_hit = daily_loss_pct >= r["hard_stop_pct"]
         trades_ok = r["trades_today"] < r["max_trades"]
@@ -483,7 +526,11 @@ def _build_risk_guard_summary() -> str:
         else:
             status_icon = "🟢 CLEAR"
 
-        revenge = f"  Revenge lock : until {r['revenge_locked_until'][:16]}" if r["revenge_locked_until"] else ""
+        revenge = (
+            f"  Revenge lock : until {r['revenge_locked_until'][:16]}"
+            if r["revenge_locked_until"]
+            else ""
+        )
         out = [
             f"{label}  ({r['firm']})",
             f"  Fence status : {status_icon}",
@@ -536,7 +583,9 @@ def _build_performance_summary() -> str:
     if sb:
         lines.append("Score breakdown:")
         for score, v in sorted(sb.items()):
-            lines.append(f"  Score {score}/5  : {v['win_rate']:.0f}% WR  ({v['total']} trades)")
+            lines.append(
+                f"  Score {score}/5  : {v['win_rate']:.0f}% WR  ({v['total']} trades)"
+            )
 
     # Pattern breakdown
     pb = stats.get("pattern_breakdown", {})
@@ -547,7 +596,7 @@ def _build_performance_summary() -> str:
             lines.append(f"  {pat[:28]:<28} : {v['win_rate']:.0f}% WR  ({v['total']})")
 
     # FVG edge
-    fvg_wr    = stats.get("fvg_present_wr")
+    fvg_wr = stats.get("fvg_present_wr")
     no_fvg_wr = stats.get("fvg_absent_wr")
     if fvg_wr is not None and no_fvg_wr is not None:
         lines += [
@@ -561,7 +610,7 @@ def _build_performance_summary() -> str:
 
 def _build_pair_summary(symbol: str) -> str:
     """Status and recent history for a single pair."""
-    stats  = _fetch_journal_stats(symbol=symbol)
+    stats = _fetch_journal_stats(symbol=symbol)
     recent = _fetch_recent_for_pair(symbol, limit=5)
     pending = [t for t in _fetch_pending_signals() if t.get("symbol") == symbol]
 
@@ -601,9 +650,12 @@ def _build_pair_summary(symbol: str) -> str:
         lines.append("RECENT TRADES:")
         for t in recent:
             outcome_map = {
-                "tp_hit": "✅TP", "sl_hit": "❌SL",
-                "manual_win": "✅WIN", "manual_loss": "❌LOSS",
-                "breakeven": "⚖️BE", "pending": "⏳",
+                "tp_hit": "✅TP",
+                "sl_hit": "❌SL",
+                "manual_win": "✅WIN",
+                "manual_loss": "❌LOSS",
+                "breakeven": "⚖️BE",
+                "pending": "⏳",
             }
             outcome = outcome_map.get(t.get("outcome", "pending"), "?")
             direction = "↑" if t.get("direction") == "bullish" else "↓"
@@ -624,19 +676,20 @@ def _build_pair_summary(symbol: str) -> str:
 # GROQ CONVERSATIONAL FALLBACK
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _groq_system_prompt() -> str:
     """Build a context-rich system prompt injected into every Groq call."""
-    now     = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
     session = _current_session_label()
-    market  = "OPEN" if _market_is_open() else "CLOSED (weekend)"
-    pairs   = ", ".join(_ACTIVE_PAIRS)
+    market = "OPEN" if _market_is_open() else "CLOSED (weekend)"
+    pairs = ", ".join(_ACTIVE_PAIRS)
 
     # Pull a compact RG snapshot to give the AI real account context
     rg = _fetch_rg_state()
     rg_ctx = ""
     if rg:
         pnl_sign = "+" if rg["daily_pnl"] >= 0 else ""
-        locked   = "LOCKED" if rg["session_locked"] else "active"
+        locked = "LOCKED" if rg["session_locked"] else "active"
         rg_ctx = (
             f"\nRisk Guard ({rg['firm']}): session {locked}, "
             f"daily PnL {pnl_sign}${rg['daily_pnl']:.2f}, "
@@ -678,7 +731,7 @@ def _groq_chat(user_text: str, context: str) -> str:
             model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": context},
-                {"role": "user",   "content": user_text},
+                {"role": "user", "content": user_text},
             ],
             max_tokens=500,
         )
@@ -691,6 +744,7 @@ def _groq_chat(user_text: str, context: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # KEYWORD ROUTER
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _extract_pair(tokens: list[str]) -> Optional[str]:
     """
@@ -718,7 +772,7 @@ async def handle_message(text: str) -> str:
       8. Fallback: Groq llama-3.3-70b-versatile        → AI response
     """
     normalised = text.strip().lower()
-    tokens     = [t.upper() for t in text.strip().split()]
+    tokens = [t.upper() for t in text.strip().split()]
 
     # ── 1. Pair name anywhere in message ─────────────────────────────────────
     pair = _extract_pair(tokens)
@@ -738,7 +792,10 @@ async def handle_message(text: str) -> str:
     if any(kw in normalised for kw in ("risk", "guard", "fence", "drawdown", "dd")):
         return _build_risk_guard_summary()
 
-    if any(kw in normalised for kw in ("performance", "stats", "week", "journal", "history")):
+    if any(
+        kw in normalised
+        for kw in ("performance", "stats", "week", "journal", "history")
+    ):
         return _build_performance_summary()
 
     if any(kw in normalised for kw in ("help", "commands", "what can you")):
@@ -751,29 +808,33 @@ async def handle_message(text: str) -> str:
 
 def _build_help() -> str:
     div = "━━━━━━━━━━━━━━━━━━━━"
-    return "\n".join([
-        "🤖 TRADER COPILOT — COMMANDS",
-        div,
-        "briefing / morning  → session briefing",
-        "account / equity    → account & PnL state",
-        "signals / setups    → active pending setups",
-        "risk / guard        → Risk Guard fence status",
-        "performance / week  → journal stats",
-        "<pair>              → pair deep-dive",
-        "                      e.g. EURUSD, GOLD, GBPJPY",
-        div,
-        "Anything else is sent to the AI assistant (Groq).",
-        "Example: 'explain BOS vs iCHoCH'",
-        div,
-    ])
+    return "\n".join(
+        [
+            "🤖 TRADER COPILOT — COMMANDS",
+            div,
+            "briefing / morning  → session briefing",
+            "account / equity    → account & PnL state",
+            "signals / setups    → active pending setups",
+            "risk / guard        → Risk Guard fence status",
+            "performance / week  → journal stats",
+            "<pair>              → pair deep-dive",
+            "                      e.g. EURUSD, GOLD, GBPJPY",
+            div,
+            "Anything else is sent to the AI assistant (Groq).",
+            "Example: 'explain BOS vs iCHoCH'",
+            div,
+        ]
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # /size COMMAND — position size calculator
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _calc_position_size(balance: float, risk_pct: float, entry: float,
-                        sl: float, symbol: str) -> str:
+
+def _calc_position_size(
+    balance: float, risk_pct: float, entry: float, sl: float, symbol: str
+) -> str:
     """
     Pure calculation — returns a formatted reply string or raises ValueError.
     Kept separate from the handler so it can be unit-tested independently.
@@ -819,11 +880,11 @@ async def _cmd_size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     try:
-        balance  = float(args[0])
+        balance = float(args[0])
         risk_pct = float(args[1])
-        entry    = float(args[2])
-        sl       = float(args[3])
-        symbol   = args[4]
+        entry = float(args[2])
+        sl = float(args[3])
+        symbol = args[4]
     except ValueError:
         await update.message.reply_text(f"Non-numeric value in arguments.\n{usage}")
         return
@@ -846,6 +907,7 @@ async def _cmd_size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # TELEGRAM APPLICATION — incoming message handler + polling setup
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Telegram Application callback for all incoming text messages.
@@ -859,9 +921,7 @@ async def _on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     user_name = (
-        update.message.from_user.first_name
-        if update.message.from_user
-        else "User"
+        update.message.from_user.first_name if update.message.from_user else "User"
     )
     log.info("Incoming message from %s: %r", user_name, user_text[:80])
 
@@ -893,7 +953,9 @@ def start_polling_thread() -> threading.Thread:
         return None
 
     if not _TOKEN:
-        log.warning("start_polling_thread: TELEGRAM_BOT_TOKEN not set — polling disabled.")
+        log.warning(
+            "start_polling_thread: TELEGRAM_BOT_TOKEN not set — polling disabled."
+        )
         return threading.Thread(target=lambda: None, daemon=True)  # no-op thread
 
     def _run():
@@ -902,11 +964,9 @@ def start_polling_thread() -> threading.Thread:
         #   RuntimeError: set_wakeup_fd only works in main thread of the main interpreter
         # Instead we drive the Application lifecycle manually so no signal
         # handlers are ever registered.
-        app = Application.builder().token(_TOKEN).build()   # type: ignore[arg-type]
+        app = Application.builder().token(_TOKEN).build()  # type: ignore[arg-type]
         app.add_handler(CommandHandler("size", _cmd_size))
-        app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, _on_message)
-        )
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_message))
 
         async def _poll():
             await app.initialize()
@@ -930,25 +990,27 @@ def start_polling_thread() -> threading.Thread:
 # CORE SEND  (unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _send(text: str) -> None:
     """Internal coroutine — sends a plain-text message to _CHAT_ID."""
     if not _bot_ready():
         return
     try:
-        async with Bot(token=_TOKEN) as bot:    # type: ignore[arg-type]
+        async with Bot(token=_TOKEN) as bot:  # type: ignore[arg-type]
             await bot.send_message(
                 chat_id=_CHAT_ID,
                 text=text,
                 parse_mode=None,
             )
         log.debug("Telegram message sent OK (%d chars)", len(text))
-    except Exception:   # noqa: BLE001
+    except Exception:  # noqa: BLE001
         log.exception("Telegram send failed — full traceback:")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PUBLIC API  (unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 async def send_alert(alert_dict: dict[str, Any]) -> None:
     """
@@ -965,7 +1027,7 @@ async def send_alert(alert_dict: dict[str, Any]) -> None:
     try:
         text = _build_alert_text(alert_dict)
         await _send(text)
-    except Exception as exc:    # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         log.warning("send_alert error: %s", exc)
 
 
@@ -984,7 +1046,7 @@ async def send_startup_message(symbols: list[str]) -> None:
     try:
         text = _build_startup_text(symbols)
         await _send(text)
-    except Exception as exc:    # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         log.warning("send_startup_message error: %s", exc)
 
 
@@ -1039,15 +1101,22 @@ if __name__ == "__main__":
             print(_build_startup_text(["GBPUSD", "EURUSD", "XAUUSD"]))
         else:
             await send_startup_message(["GBPUSD", "EURUSD", "XAUUSD"])
-            await send_alert({
-                "symbol": "GBPUSD", "direction": "SELL",
-                "pattern": "Breakout & Retest", "session": "London",
-                "confidence": 82, "entry": 1.2681, "stop_loss": 1.2714,
-                "take_profit": 1.2615, "rr": "2.4",
-                "why": "BOS confirmed 1H. Sweep at Asian low. FVG at retest.",
-                "memory": "9 similar — 8W 1L.",
-                "news_warning": "CPI in 47min — reduce size",
-            })
+            await send_alert(
+                {
+                    "symbol": "GBPUSD",
+                    "direction": "SELL",
+                    "pattern": "Breakout & Retest",
+                    "session": "London",
+                    "confidence": 82,
+                    "entry": 1.2681,
+                    "stop_loss": 1.2714,
+                    "take_profit": 1.2615,
+                    "rr": "2.4",
+                    "why": "BOS confirmed 1H. Sweep at Asian low. FVG at retest.",
+                    "memory": "9 similar — 8W 1L.",
+                    "news_warning": "CPI in 47min — reduce size",
+                }
+            )
             print("Outbound messages sent — check your Telegram chat.")
 
     asyncio.run(_smoke())

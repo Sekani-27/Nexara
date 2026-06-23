@@ -9,9 +9,7 @@ Each test covers:
 """
 
 from datetime import datetime, timedelta
-from trader_copilot.core.structures import (
-    Candle, Direction, StructureType, SwingPoint
-)
+from trader_copilot.core.structures import Candle, Direction, StructureType, SwingPoint
 from trader_copilot.core.poi_engine import POIEngine
 from trader_copilot.patterns.pattern_engine import PatternEngine
 from trader_copilot.config.pairs import PAIR_CONFIGS
@@ -21,11 +19,15 @@ from trader_copilot.config.pairs import PAIR_CONFIGS
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def make_candle(open_, high, low, close, i=0, tf="4H") -> Candle:
     return Candle(
         timestamp=datetime(2024, 1, 1, 0, 0) + timedelta(hours=4 * i),
-        open=open_, high=high, low=low, close=close,
-        timeframe=tf
+        open=open_,
+        high=high,
+        low=low,
+        close=close,
+        timeframe=tf,
     )
 
 
@@ -51,6 +53,7 @@ def _swing_low(candle: Candle, idx: int, level: float = None) -> SwingPoint:
 # DETECT_FLAG — DESCENDING (BEARISH)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_flag_bearish_valid():
     """
     Descending flag: 20 candles in a tight range (consolidation),
@@ -69,16 +72,16 @@ def test_flag_bearish_valid():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     # 20 consolidation candles — tight range, floor at 1.0990
     candles = []
     for i in range(20):
         o = 1.1010
         h = 1.1015
-        l = 1.0990
+        low_ = 1.0990
         c = 1.1005
-        candles.append(make_candle(o, h, l, c, i=i))
+        candles.append(make_candle(o, h, low_, c, i=i))
 
     # BOS candle: low=1.0990 (= consolidation floor, does NOT become a new minimum),
     # close=1.0985 (body closes below floor).
@@ -94,6 +97,7 @@ def test_flag_bearish_valid():
     ]
 
     from trader_copilot.core.structures import BiasType
+
     result = engine.detect_flag(candles, swings, bias=BiasType.BEARISH, fvg_engine=poi)
 
     assert result is not None, "Should detect descending flag"
@@ -110,7 +114,7 @@ def test_flag_bearish_no_signal_when_range_too_wide():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     # Each candle has a tiny avg range (0.0002) but consolidation spans 0.0020
     # → consolidation_range (0.0020) > avg_range*4 (0.0008)
@@ -118,13 +122,14 @@ def test_flag_bearish_no_signal_when_range_too_wide():
     for i in range(20):
         o = 1.1000 + i * 0.0001
         h = o + 0.0002
-        l = o - 0.0001
+        low_ = o - 0.0001
         c = o + 0.0001
-        candles.append(make_candle(o, h, l, c, i=i))
+        candles.append(make_candle(o, h, low_, c, i=i))
 
     # Consolidation span = (1.1019+0.0002) - (1.1000-0.0001) = 0.0022, avg_range ≈ 0.0003
     # 0.0022 > 0.0003*4 = 0.0012 → engine returns None
     from trader_copilot.core.structures import BiasType
+
     swings = [_swing_high(candles[5], 5), _swing_low(candles[15], 15)]
     result = engine.detect_flag(candles, swings, bias=BiasType.BEARISH, fvg_engine=poi)
 
@@ -139,10 +144,11 @@ def test_flag_insufficient_candles():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles = [make_candle(1.10, 1.11, 1.09, 1.105, i=i) for i in range(15)]
     from trader_copilot.core.structures import BiasType
+
     swings = [_swing_high(candles[5], 5), _swing_low(candles[10], 10)]
     result = engine.detect_flag(candles, swings, bias=BiasType.BEARISH, fvg_engine=poi)
 
@@ -165,16 +171,16 @@ def test_flag_bullish_valid():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     # 20 consolidation candles — tight range, ceiling at 1.1010
     candles = []
     for i in range(20):
         o = 1.0990
         h = 1.1010
-        l = 1.0985
+        low_ = 1.0985
         c = 1.0995
-        candles.append(make_candle(o, h, l, c, i=i))
+        candles.append(make_candle(o, h, low_, c, i=i))
 
     # BOS candle: high=1.1010 (= consolidation ceiling, does NOT become a new maximum),
     # close=1.1015 (body closes above ceiling).
@@ -182,8 +188,12 @@ def test_flag_bullish_valid():
     # _find_body_bos scans forward and finds this candle (close=1.1015 > 1.1010 ✓).
     candles.append(make_candle(1.0990, 1.1010, 1.0985, 1.1015, i=20))
 
-    swings = [_swing_low(candles[5], 5, level=1.0985), _swing_high(candles[15], 15, level=1.1010)]
+    swings = [
+        _swing_low(candles[5], 5, level=1.0985),
+        _swing_high(candles[15], 15, level=1.1010),
+    ]
     from trader_copilot.core.structures import BiasType
+
     result = engine.detect_flag(candles, swings, bias=BiasType.BULLISH, fvg_engine=poi)
 
     assert result is not None, "Should detect ascending flag"
@@ -196,6 +206,7 @@ def test_flag_bullish_valid():
 # DETECT_HEAD_AND_SHOULDERS
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _make_hs_candles_and_swings(config):
     """
     Build a classic H&S pattern:
@@ -207,25 +218,29 @@ def _make_hs_candles_and_swings(config):
       Neckline ≈ (1.0950+1.0960)/2 = 1.0955
       BOS: body closes below 1.0955 at idx 12
     """
-    tolerance = config.peak_equality_pips * config.pip_size  # 0.0005 for EURUSD
+    _tolerance = config.peak_equality_pips * config.pip_size  # 0.0005 for EURUSD
 
     candles = [make_candle(1.1000, 1.1020, 1.0990, 1.1010, i=i) for i in range(20)]
 
     # Override candles at key indices
-    candles[2]  = make_candle(1.1080, 1.1100, 1.1070, 1.1090, i=2)   # LS high
-    candles[4]  = make_candle(1.0960, 1.0970, 1.0950, 1.0955, i=4)   # NL low 1
-    candles[6]  = make_candle(1.1280, 1.1300, 1.1260, 1.1290, i=6)   # Head
-    candles[8]  = make_candle(1.0970, 1.0975, 1.0960, 1.0965, i=8)   # NL low 2
+    candles[2] = make_candle(1.1080, 1.1100, 1.1070, 1.1090, i=2)  # LS high
+    candles[4] = make_candle(1.0960, 1.0970, 1.0950, 1.0955, i=4)  # NL low 1
+    candles[6] = make_candle(1.1280, 1.1300, 1.1260, 1.1290, i=6)  # Head
+    candles[8] = make_candle(1.0970, 1.0975, 1.0960, 1.0965, i=8)  # NL low 2
     candles[10] = make_candle(1.1090, 1.1110, 1.1080, 1.1100, i=10)  # RS
     # BOS: body (open=1.0960, close=0.0940) closes below neckline 1.0955
-    candles[12] = make_candle(1.0960, 1.0965, 1.0930, 1.0940, i=12)  # BOS below neckline
+    candles[12] = make_candle(
+        1.0960, 1.0965, 1.0930, 1.0940, i=12
+    )  # BOS below neckline
 
     swings = [
-        _swing_high(candles[2],  2,  level=1.1100),  # LS
-        _swing_low (candles[4],  4,  level=1.0950),  # NL low 1
-        _swing_high(candles[6],  6,  level=1.1300),  # Head
-        _swing_low (candles[8],  8,  level=1.0960),  # NL low 2
-        _swing_high(candles[10], 10, level=1.1110),  # RS — within shoulder_tolerance of LS
+        _swing_high(candles[2], 2, level=1.1100),  # LS
+        _swing_low(candles[4], 4, level=1.0950),  # NL low 1
+        _swing_high(candles[6], 6, level=1.1300),  # Head
+        _swing_low(candles[8], 8, level=1.0960),  # NL low 2
+        _swing_high(
+            candles[10], 10, level=1.1110
+        ),  # RS — within shoulder_tolerance of LS
     ]
 
     return candles, swings
@@ -235,7 +250,7 @@ def test_hs_valid():
     """Classic H&S: three peaks (LS < Head > RS), two neckline lows, BOS below neckline."""
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_hs_candles_and_swings(config)
     result = engine.detect_head_and_shoulders(candles, swings, fvg_engine=poi)
@@ -246,8 +261,9 @@ def test_hs_valid():
     assert result.pattern_name == "Head and Shoulders"
     # Neckline should be average of the two lows
     expected_neckline = (1.0950 + 1.0960) / 2
-    assert abs(result.neckline - expected_neckline) < 0.0001, \
-        f"Neckline should be ~{expected_neckline:.4f}, got {result.neckline:.4f}"
+    assert (
+        abs(result.neckline - expected_neckline) < 0.0001
+    ), f"Neckline should be ~{expected_neckline:.4f}, got {result.neckline:.4f}"
     print(f"PASS — H&S | Head: 1.13000 | Neckline: {result.neckline:.5f}")
 
 
@@ -258,12 +274,14 @@ def test_hs_no_signal_when_shoulders_unequal():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_hs_candles_and_swings(config)
 
     # Replace RS with a much higher level (0.0200 above LS — far outside tolerance)
-    swings[4] = _swing_high(candles[10], 10, level=1.1300)  # Same as head → unequal shoulders
+    swings[4] = _swing_high(
+        candles[10], 10, level=1.1300
+    )  # Same as head → unequal shoulders
 
     result = engine.detect_head_and_shoulders(candles, swings, fvg_engine=poi)
 
@@ -278,12 +296,12 @@ def test_hs_insufficient_swings():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles = [make_candle(1.1000, 1.1010, 1.0990, 1.1005, i=i) for i in range(10)]
     swings = [
         _swing_high(candles[2], 2, level=1.1010),
-        _swing_low (candles[5], 5, level=1.0990),
+        _swing_low(candles[5], 5, level=1.0990),
     ]
 
     result = engine.detect_head_and_shoulders(candles, swings, fvg_engine=poi)
@@ -298,7 +316,7 @@ def test_hs_no_signal_when_no_bos():
     """
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_hs_candles_and_swings(config)
 
@@ -307,13 +325,16 @@ def test_hs_no_signal_when_no_bos():
 
     result = engine.detect_head_and_shoulders(candles, swings, fvg_engine=poi)
 
-    assert result is None, "Wick-only break should not produce H&S signal (body BOS rule)"
+    assert (
+        result is None
+    ), "Wick-only break should not produce H&S signal (body BOS rule)"
     print("PASS — Wick-only neckline break correctly rejected for H&S")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DETECT_INVERSE_HEAD_AND_SHOULDERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _make_ihs_candles_and_swings(config):
     """
@@ -328,20 +349,22 @@ def _make_ihs_candles_and_swings(config):
     """
     candles = [make_candle(1.1000, 1.1020, 1.0990, 1.1010, i=i) for i in range(20)]
 
-    candles[2]  = make_candle(1.0920, 1.0930, 1.0900, 1.0910, i=2)   # LS trough
-    candles[4]  = make_candle(1.1030, 1.1050, 1.1020, 1.1040, i=4)   # NL high 1
-    candles[6]  = make_candle(1.0720, 1.0730, 1.0700, 1.0710, i=6)   # Head (lowest)
-    candles[8]  = make_candle(1.1020, 1.1040, 1.1010, 1.1030, i=8)   # NL high 2
+    candles[2] = make_candle(1.0920, 1.0930, 1.0900, 1.0910, i=2)  # LS trough
+    candles[4] = make_candle(1.1030, 1.1050, 1.1020, 1.1040, i=4)  # NL high 1
+    candles[6] = make_candle(1.0720, 1.0730, 1.0700, 1.0710, i=6)  # Head (lowest)
+    candles[8] = make_candle(1.1020, 1.1040, 1.1010, 1.1030, i=8)  # NL high 2
     candles[10] = make_candle(1.0900, 1.0915, 1.0890, 1.0905, i=10)  # RS trough (~LS)
     # BOS: body closes above neckline ~1.1045
-    candles[12] = make_candle(1.1040, 1.1070, 1.1035, 1.1060, i=12)  # BOS above neckline
+    candles[12] = make_candle(
+        1.1040, 1.1070, 1.1035, 1.1060, i=12
+    )  # BOS above neckline
 
     swings = [
-        _swing_low (candles[2],  2,  level=1.0900),  # LS trough
-        _swing_high(candles[4],  4,  level=1.1050),  # NL high 1
-        _swing_low (candles[6],  6,  level=1.0700),  # Head
-        _swing_high(candles[8],  8,  level=1.1040),  # NL high 2
-        _swing_low (candles[10], 10, level=1.0910),  # RS trough (~LS)
+        _swing_low(candles[2], 2, level=1.0900),  # LS trough
+        _swing_high(candles[4], 4, level=1.1050),  # NL high 1
+        _swing_low(candles[6], 6, level=1.0700),  # Head
+        _swing_high(candles[8], 8, level=1.1040),  # NL high 2
+        _swing_low(candles[10], 10, level=1.0910),  # RS trough (~LS)
     ]
 
     return candles, swings
@@ -351,7 +374,7 @@ def test_inverse_hs_valid():
     """Inverse H&S: three troughs (LS > Head < RS), two neckline highs, BOS above neckline."""
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_ihs_candles_and_swings(config)
     result = engine.detect_inverse_hs(candles, swings, fvg_engine=poi)
@@ -361,8 +384,9 @@ def test_inverse_hs_valid():
     assert result.direction == Direction.BULLISH
     assert result.pattern_name == "Inverse Head and Shoulders"
     expected_neckline = (1.1050 + 1.1040) / 2
-    assert abs(result.neckline - expected_neckline) < 0.0001, \
-        f"Neckline should be ~{expected_neckline:.4f}, got {result.neckline:.4f}"
+    assert (
+        abs(result.neckline - expected_neckline) < 0.0001
+    ), f"Neckline should be ~{expected_neckline:.4f}, got {result.neckline:.4f}"
     print(f"PASS — Inverse H&S | Head: 1.07000 | Neckline: {result.neckline:.5f}")
 
 
@@ -370,7 +394,7 @@ def test_inverse_hs_no_signal_when_shoulders_unequal():
     """RS trough at a much lower level than LS — outside shoulder tolerance."""
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_ihs_candles_and_swings(config)
 
@@ -387,11 +411,11 @@ def test_inverse_hs_insufficient_swings():
     """Inverse H&S requires at least 3 swing lows and 2 swing highs."""
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles = [make_candle(1.1000, 1.1010, 1.0990, 1.1005, i=i) for i in range(10)]
     swings = [
-        _swing_low (candles[2], 2, level=1.0990),
+        _swing_low(candles[2], 2, level=1.0990),
         _swing_high(candles[5], 5, level=1.1010),
     ]
 
@@ -405,16 +429,20 @@ def test_inverse_hs_no_signal_when_no_bos():
     """Wick-only break above neckline does not trigger inverse H&S (body BOS rule)."""
     config = PAIR_CONFIGS["EURUSD"]
     engine = PatternEngine(config)
-    poi    = POIEngine(config)
+    poi = POIEngine(config)
 
     candles, swings = _make_ihs_candles_and_swings(config)
 
     # Replace BOS candle with a wick-only pierce above neckline — body stays below
-    candles[12] = make_candle(1.1020, 1.1060, 1.1015, 1.1030, i=12)  # close < neckline 1.1045
+    candles[12] = make_candle(
+        1.1020, 1.1060, 1.1015, 1.1030, i=12
+    )  # close < neckline 1.1045
 
     result = engine.detect_inverse_hs(candles, swings, fvg_engine=poi)
 
-    assert result is None, "Wick-only neckline break should not produce inverse H&S signal"
+    assert (
+        result is None
+    ), "Wick-only neckline break should not produce inverse H&S signal"
     print("PASS — Wick-only break correctly rejected for inverse H&S")
 
 
@@ -447,6 +475,7 @@ if __name__ == "__main__":
             passed += 1
         except Exception as e:
             import traceback
+
             print(f"FAIL — {test.__name__}: {e}")
             traceback.print_exc()
             failed += 1

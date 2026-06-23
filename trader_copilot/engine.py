@@ -23,15 +23,15 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from .core.structures import Candle, Direction, BiasType, TradeSignal
-
-logger = logging.getLogger(__name__)
 from .core.structure_engine import StructureEngine
 from .core.poi_engine import POIEngine
 from .core.signal_generator import SignalGenerator
 from .patterns.pattern_engine import PatternEngine
-from .patterns.breakout_retest_engine import BreakoutRetestEngine       # ← NEW
+from .patterns.breakout_retest_engine import BreakoutRetestEngine  # ← NEW
 from .alerts.alert_engine import AlertEngine
 from .config.pairs import PAIR_CONFIGS, PairConfig
+
+logger = logging.getLogger(__name__)
 
 
 class TraderCopilot:
@@ -44,18 +44,22 @@ class TraderCopilot:
         backtest_mode: bool = False,
     ):
         if symbol not in PAIR_CONFIGS:
-            raise ValueError(f"Unknown symbol: {symbol}. Supported: {list(PAIR_CONFIGS.keys())}")
+            raise ValueError(
+                f"Unknown symbol: {symbol}. Supported: {list(PAIR_CONFIGS.keys())}"
+            )
 
-        self.symbol        = symbol
+        self.symbol = symbol
         self.backtest_mode = backtest_mode
         self.config: PairConfig = PAIR_CONFIGS[symbol]
 
-        self.structure_engine       = StructureEngine(self.config)
-        self.poi_engine             = POIEngine(self.config)
-        self.pattern_engine         = PatternEngine(self.config)
-        self.signal_generator       = SignalGenerator(self.config, backtest_mode=backtest_mode)
+        self.structure_engine = StructureEngine(self.config)
+        self.poi_engine = POIEngine(self.config)
+        self.pattern_engine = PatternEngine(self.config)
+        self.signal_generator = SignalGenerator(
+            self.config, backtest_mode=backtest_mode
+        )
         self.breakout_retest_engine = BreakoutRetestEngine(self.config)
-        self.alert_engine           = AlertEngine(webhook_urls=webhook_urls, log_path=log_path)
+        self.alert_engine = AlertEngine(webhook_urls=webhook_urls, log_path=log_path)
 
     # ─────────────────────────────────────────────
     # ORIGINAL PIPELINE (XAUUSD / NAS100)
@@ -63,8 +67,8 @@ class TraderCopilot:
 
     def analyse(
         self,
-        candles_htf: List[Candle],   # Structure timeframe (e.g. 4H for XAUUSD)
-        candles_ltf: List[Candle],   # Entry timeframe (e.g. 15M for XAUUSD)
+        candles_htf: List[Candle],  # Structure timeframe (e.g. 4H for XAUUSD)
+        candles_ltf: List[Candle],  # Entry timeframe (e.g. 15M for XAUUSD)
     ) -> Optional[TradeSignal]:
         """
         Full pipeline:
@@ -91,22 +95,34 @@ class TraderCopilot:
 
         if bias == BiasType.BEARISH:
             pattern = (
-                self.pattern_engine.detect_double_top(candles_htf, swings_htf, self.poi_engine) or
-                self.pattern_engine.detect_head_and_shoulders(candles_htf, swings_htf, self.poi_engine) or
-                self.pattern_engine.detect_flag(candles_htf, swings_htf, bias, self.poi_engine)
+                self.pattern_engine.detect_double_top(
+                    candles_htf, swings_htf, self.poi_engine
+                )
+                or self.pattern_engine.detect_head_and_shoulders(
+                    candles_htf, swings_htf, self.poi_engine
+                )
+                or self.pattern_engine.detect_flag(
+                    candles_htf, swings_htf, bias, self.poi_engine
+                )
             )
         elif bias == BiasType.BULLISH:
             pattern = (
-                self.pattern_engine.detect_double_bottom(candles_ltf, swings_htf, self.poi_engine) or
-                self.pattern_engine.detect_inverse_hs(candles_htf, swings_htf, self.poi_engine) or
-                self.pattern_engine.detect_flag(candles_htf, swings_htf, bias, self.poi_engine)
+                self.pattern_engine.detect_double_bottom(
+                    candles_ltf, swings_htf, self.poi_engine
+                )
+                or self.pattern_engine.detect_inverse_hs(
+                    candles_htf, swings_htf, self.poi_engine
+                )
+                or self.pattern_engine.detect_flag(
+                    candles_htf, swings_htf, bias, self.poi_engine
+                )
             )
 
         if not pattern or not pattern.valid:
             return None
 
         # ── Step 3: LTF — sweep confirmation ──
-        swings_ltf = self.structure_engine.detect_swings(candles_ltf, left=2, right=2)
+        _swings_ltf = self.structure_engine.detect_swings(candles_ltf, left=2, right=2)
 
         sweep = self.structure_engine.detect_sweep(
             candles=candles_ltf,
@@ -153,7 +169,7 @@ class TraderCopilot:
             bias=bias,
             sweep=sweep,
             ob=ob,
-            candles_after_bos=candles_ltf[pattern.bos_candle_index:],
+            candles_after_bos=candles_ltf[pattern.bos_candle_index :],
         )
 
         return signal
@@ -183,16 +199,18 @@ class TraderCopilot:
         # Ranging / choppy structure produces false breakouts and absurd R:R values.
         # Uses the same determine_bias() check the original HTF pipeline already does.
         swings_30m = self.structure_engine.detect_swings(candles_30m, left=3, right=3)
-        bias_30m   = self.structure_engine.determine_bias(swings_30m)
+        bias_30m = self.structure_engine.determine_bias(swings_30m)
         if bias_30m == BiasType.RANGING:
             if not self.backtest_mode:
                 logger.info(
                     "[%s] 30M bias=RANGING — Breakout & Retest blocked "
-                    "(pattern requires trending structure)", self.symbol
+                    "(pattern requires trending structure)",
+                    self.symbol,
                 )
                 return None
             logger.debug(
-                "[%s] 30M bias=RANGING — regime gate bypassed (backtest_mode)", self.symbol
+                "[%s] 30M bias=RANGING — regime gate bypassed (backtest_mode)",
+                self.symbol,
             )
 
         # Run Breakout & Retest detection
@@ -240,7 +258,7 @@ class TraderCopilot:
             fvg_present=result.fvg is not None,
             ob_present=True,
             killzone_active=self._is_killzone_active(),
-            notes=result.notes
+            notes=result.notes,
         )
 
         return signal
@@ -274,7 +292,11 @@ class TraderCopilot:
         # R:R check against opposite channel boundary
         risk = abs(result.entry_price - result.stop_loss)
         reward = abs(
-            (result.channel_low if result.direction == Direction.BEARISH else result.channel_high)
+            (
+                result.channel_low
+                if result.direction == Direction.BEARISH
+                else result.channel_high
+            )
             - result.entry_price
         )
         if risk > 0 and (reward / risk) >= 2.0:

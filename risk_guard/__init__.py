@@ -21,16 +21,32 @@ from typing import Optional
 
 from .engine import RiskGuardEngine
 from .models import (
-    DecisionStatus, Decision, FirmConfig,
-    TradeProposal, SessionState,
+    DecisionStatus,
+    Decision,
+    FirmConfig,
+    TradeProposal,
+    SessionState,
 )
 from .state import RiskGuardState
 from .firms.loader import load_firm, list_firms
+
+__all__ = [
+    "RiskGuard",
+    "DecisionStatus",
+    "Decision",
+    "FirmConfig",
+    "TradeProposal",
+    "SessionState",
+    "RiskGuardState",
+    "load_firm",
+    "list_firms",
+]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _load_env_values(env_file: Optional[str]) -> dict:
     """
@@ -43,9 +59,10 @@ def _load_env_values(env_file: Optional[str]) -> dict:
     """
     try:
         from dotenv import dotenv_values
+
         if env_file:
             return dotenv_values(env_file)
-        return dotenv_values()   # reads .env in current working directory
+        return dotenv_values()  # reads .env in current working directory
     except ImportError:
         return {}
 
@@ -53,6 +70,7 @@ def _load_env_values(env_file: Optional[str]) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN FAÇADE
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class RiskGuard:
     """
@@ -72,32 +90,30 @@ class RiskGuard:
 
     def __init__(
         self,
-        firm_name:    Optional[str]   = None,
+        firm_name: Optional[str] = None,
         account_size: Optional[float] = None,
-        db_path:      Optional[str]   = None,
-        env_file:     Optional[str]   = None,
+        db_path: Optional[str] = None,
+        env_file: Optional[str] = None,
     ):
         # 1. Load env values without polluting os.environ
         env = _load_env_values(env_file)
 
         # 2. Resolve each config value: explicit arg > env file > hard default
-        resolved_firm    = firm_name    or env.get("ACTIVE_FIRM", "goat")
+        resolved_firm = firm_name or env.get("ACTIVE_FIRM", "goat")
         resolved_account = float(
-            account_size if account_size is not None
+            account_size
+            if account_size is not None
             else env.get("ACCOUNT_SIZE") or os.getenv("ACCOUNT_SIZE", "10000")
         )
-        resolved_db = (
-            db_path
-            or env.get("RISK_GUARD_DB_PATH", "risk_guard.db")
-        )
+        resolved_db = db_path or env.get("RISK_GUARD_DB_PATH", "risk_guard.db")
 
         # 3. Telegram credentials — per-instance, isolated from os.environ
         #    Fall back to os.environ so existing callers (no env_file) still work.
-        self.telegram_token   = (
-            env.get("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
+        self.telegram_token = env.get("TELEGRAM_BOT_TOKEN") or os.getenv(
+            "TELEGRAM_BOT_TOKEN"
         )
-        self.telegram_chat_id = (
-            env.get("TELEGRAM_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID")
+        self.telegram_chat_id = env.get("TELEGRAM_CHAT_ID") or os.getenv(
+            "TELEGRAM_CHAT_ID"
         )
 
         # 4. Ensure DB parent directory exists (e.g. ./data/)
@@ -105,14 +121,14 @@ class RiskGuard:
         os.makedirs(db_dir, exist_ok=True)
 
         # 5. Wire up core components
-        self.config    = load_firm(resolved_firm)
-        self.state_db  = RiskGuardState(db_path=resolved_db)
-        self.engine    = RiskGuardEngine()
-        self.state     = self.state_db.load_or_create(resolved_firm, resolved_account)
+        self.config = load_firm(resolved_firm)
+        self.state_db = RiskGuardState(db_path=resolved_db)
+        self.engine = RiskGuardEngine()
+        self.state = self.state_db.load_or_create(resolved_firm, resolved_account)
 
         # 6. Preserve for downstream use (monitor, runner scripts)
         self._env_file = env_file
-        self._env      = env
+        self._env = env
 
     # ─────────────────────────────────────────────
     # PRIMARY API
@@ -146,6 +162,7 @@ class RiskGuard:
     async def send_alert(self, text: str):
         """Send a Telegram alert using this instance's credentials."""
         from .alerts import send_rg_alert
+
         await send_rg_alert(
             text,
             token=self.telegram_token,

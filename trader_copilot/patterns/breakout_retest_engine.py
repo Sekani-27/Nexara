@@ -25,12 +25,15 @@ Timeframe: 30M (currency pairs only)
 Supported pairs: EURUSD, GBPUSD, EURAUD, EURCAD, AUDCAD, CADJPY, GBPCAD
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
-from datetime import datetime
 
 from ..core.structures import (
-    Candle, Direction, BiasType, FairValueGap, OrderBlock, TradeSignal
+    Candle,
+    Direction,
+    BiasType,
+    FairValueGap,
+    OrderBlock,
 )
 from ..core.poi_engine import POIEngine
 from ..config.pairs import PairConfig
@@ -40,31 +43,33 @@ from ..config.pairs import PairConfig
 # RESULT DATACLASS
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class BreakoutRetestResult:
     """Output of a confirmed Breakout & Retest setup."""
-    pattern_name: str                        # e.g. "Bearish Breakout & Retest"
-    direction: Direction                     # BEARISH or BULLISH
-    channel_bias: BiasType                   # Dominant channel direction
+
+    pattern_name: str  # e.g. "Bearish Breakout & Retest"
+    direction: Direction  # BEARISH or BULLISH
+    channel_bias: BiasType  # Dominant channel direction
 
     # Channel levels
-    channel_high: float                      # Upper boundary of channel
-    channel_low: float                       # Lower boundary of channel
-    ninety_pct_level: float                  # 90% rule — channel origin / hard invalidation
+    channel_high: float  # Upper boundary of channel
+    channel_low: float  # Lower boundary of channel
+    ninety_pct_level: float  # 90% rule — channel origin / hard invalidation
 
     # Wedge levels
-    wedge_high: float                        # Top of corrective wedge
-    wedge_low: float                         # Bottom of corrective wedge
-    wedge_breakout_index: int                # Candle index where body broke wedge
+    wedge_high: float  # Top of corrective wedge
+    wedge_low: float  # Bottom of corrective wedge
+    wedge_breakout_index: int  # Candle index where body broke wedge
 
     # POI
-    order_block: OrderBlock                  # OB left by breakout candle
-    fvg: Optional[FairValueGap]             # FVG from displacement (optional)
+    order_block: OrderBlock  # OB left by breakout candle
+    fvg: Optional[FairValueGap]  # FVG from displacement (optional)
 
     # Entry levels
-    entry_price: float                       # TOP of OB (short) / BOTTOM of OB (long)
-    stop_loss: float                         # Beyond OB
-    retest_index: Optional[int]             # Candle index where retest occurred
+    entry_price: float  # TOP of OB (short) / BOTTOM of OB (long)
+    stop_loss: float  # Beyond OB
+    retest_index: Optional[int]  # Candle index where retest occurred
 
     valid: bool = True
     notes: str = ""
@@ -74,20 +79,18 @@ class BreakoutRetestResult:
 # CHANNEL DETECTOR
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class Channel:
-    high: float           # Upper trendline anchor
-    low: float            # Lower trendline anchor
-    bias: BiasType        # BEARISH = descending, BULLISH = ascending
+    high: float  # Upper trendline anchor
+    low: float  # Lower trendline anchor
+    bias: BiasType  # BEARISH = descending, BULLISH = ascending
     ninety_pct_level: float  # Origin of the channel (90% rule)
     start_index: int
     end_index: int
 
 
-def detect_channel(
-    candles: List[Candle],
-    lookback: int = 60
-) -> Optional[Channel]:
+def detect_channel(candles: List[Candle], lookback: int = 60) -> Optional[Channel]:
     """
     Simplified channel detection:
     - Scans the last `lookback` candles
@@ -105,13 +108,13 @@ def detect_channel(
     start_idx = len(candles) - lookback
 
     highs = [c.high for c in window]
-    lows  = [c.low  for c in window]
+    lows = [c.low for c in window]
 
     channel_high = max(highs)
-    channel_low  = min(lows)
+    channel_low = min(lows)
 
     high_idx = highs.index(channel_high)
-    low_idx  = lows.index(channel_low)
+    low_idx = lows.index(channel_low)
 
     # Bias: if the high came before the low → bearish (price dropped)
     #       if the low came before the high → bullish (price rose)
@@ -132,7 +135,7 @@ def detect_channel(
         bias=bias,
         ninety_pct_level=ninety_pct_level,
         start_index=start_idx,
-        end_index=len(candles) - 1
+        end_index=len(candles) - 1,
     )
 
 
@@ -140,19 +143,20 @@ def detect_channel(
 # WEDGE DETECTOR
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class Wedge:
-    high: float          # Top of corrective wedge (resistance trendline)
-    low: float           # Bottom of corrective wedge (support trendline)
-    direction: BiasType  # BULLISH = rising wedge (in downtrend), BEARISH = falling wedge
+    high: float  # Top of corrective wedge (resistance trendline)
+    low: float  # Bottom of corrective wedge (support trendline)
+    direction: (
+        BiasType  # BULLISH = rising wedge (in downtrend), BEARISH = falling wedge
+    )
     start_index: int
     end_index: int
 
 
 def detect_corrective_wedge(
-    candles: List[Candle],
-    channel_bias: BiasType,
-    lookback: int = 30
+    candles: List[Candle], channel_bias: BiasType, lookback: int = 30
 ) -> Optional[Wedge]:
     """
     Detects the corrective wedge formed inside the channel.
@@ -176,14 +180,14 @@ def detect_corrective_wedge(
     start_idx = len(candles) - lookback
 
     highs = [c.high for c in window]
-    lows  = [c.low  for c in window]
+    lows = [c.low for c in window]
 
     wedge_high = max(highs)
-    wedge_low  = min(lows)
+    wedge_low = min(lows)
 
     # Split window in half to check slope convergence
     mid = lookback // 2
-    first_half_range  = max(highs[:mid]) - min(lows[:mid])
+    first_half_range = max(highs[:mid]) - min(lows[:mid])
     second_half_range = max(highs[mid:]) - min(lows[mid:])
 
     # Wedge must be tightening (corrective, losing momentum)
@@ -192,7 +196,7 @@ def detect_corrective_wedge(
 
     if channel_bias == BiasType.BEARISH:
         # Expect a rising wedge: recent highs and lows both drifting up
-        first_avg_close  = sum(c.close for c in window[:mid]) / mid
+        first_avg_close = sum(c.close for c in window[:mid]) / mid
         second_avg_close = sum(c.close for c in window[mid:]) / (lookback - mid)
         if second_avg_close <= first_avg_close:
             return None  # Not rising — not a rising wedge in downtrend
@@ -200,7 +204,7 @@ def detect_corrective_wedge(
 
     elif channel_bias == BiasType.BULLISH:
         # Expect a falling wedge: recent price drifting down
-        first_avg_close  = sum(c.close for c in window[:mid]) / mid
+        first_avg_close = sum(c.close for c in window[:mid]) / mid
         second_avg_close = sum(c.close for c in window[mid:]) / (lookback - mid)
         if second_avg_close >= first_avg_close:
             return None  # Not falling — not a falling wedge in uptrend
@@ -214,7 +218,7 @@ def detect_corrective_wedge(
         low=wedge_low,
         direction=wedge_direction,
         start_index=start_idx,
-        end_index=len(candles) - 1
+        end_index=len(candles) - 1,
     )
 
 
@@ -222,11 +226,9 @@ def detect_corrective_wedge(
 # BREAKOUT DETECTOR
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def detect_wedge_breakout(
-    candles: List[Candle],
-    wedge: Wedge,
-    channel_bias: BiasType,
-    search_from: int
+    candles: List[Candle], wedge: Wedge, channel_bias: BiasType, search_from: int
 ) -> Optional[Tuple[Candle, int]]:
     """
     Detects the breakout candle from the corrective wedge.
@@ -254,6 +256,7 @@ def detect_wedge_breakout(
 # RETEST DETECTOR
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def detect_ob_retest(
     candles: List[Candle],
     ob: OrderBlock,
@@ -261,7 +264,7 @@ def detect_ob_retest(
     breakout_index: int,
     ninety_pct_level: float,
     pip_size: float,
-    tolerance_pips: int = 3
+    tolerance_pips: int = 3,
 ) -> Optional[int]:
     """
     After the breakout, waits for price to retrace back to the OB.
@@ -298,6 +301,7 @@ def detect_ob_retest(
 # MAIN ENGINE
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class BreakoutRetestEngine:
     """
     Currency-specific Breakout & Retest detection engine.
@@ -311,7 +315,7 @@ class BreakoutRetestEngine:
     TIMEFRAME = "30M"
 
     def __init__(self, config: PairConfig):
-        self.config    = config
+        self.config = config
         self.poi_engine = POIEngine(config)
 
     def analyse(
@@ -346,8 +350,7 @@ class BreakoutRetestEngine:
             return None
 
         direction = (
-            Direction.BEARISH if channel.bias == BiasType.BEARISH
-            else Direction.BULLISH
+            Direction.BEARISH if channel.bias == BiasType.BEARISH else Direction.BULLISH
         )
 
         # ── Step 2: Corrective Wedge ─────────────────────────────────────────
@@ -361,7 +364,7 @@ class BreakoutRetestEngine:
         wedge = detect_corrective_wedge(
             candles_30m[:wedge_window_end],
             channel_bias=channel.bias,
-            lookback=wedge_lookback
+            lookback=wedge_lookback,
         )
         if not wedge:
             return None
@@ -370,10 +373,7 @@ class BreakoutRetestEngine:
         # Search from the breakout scan window start through the full array
         search_from = wedge_window_end
         breakout_result = detect_wedge_breakout(
-            candles_30m,
-            wedge=wedge,
-            channel_bias=channel.bias,
-            search_from=search_from
+            candles_30m, wedge=wedge, channel_bias=channel.bias, search_from=search_from
         )
         if not breakout_result:
             return None
@@ -386,7 +386,7 @@ class BreakoutRetestEngine:
             candles=candles_30m,
             direction=direction,
             sweep_index=breakout_index,
-            lookback=5
+            lookback=5,
         )
         if not ob:
             return None
@@ -396,7 +396,7 @@ class BreakoutRetestEngine:
             candles=candles_30m,
             direction=direction,
             around_index=breakout_index,
-            search_range=3
+            search_range=3,
         )
 
         # ── Step 6: Retest of OB ─────────────────────────────────────────────
@@ -407,7 +407,7 @@ class BreakoutRetestEngine:
             breakout_index=breakout_index,
             ninety_pct_level=channel.ninety_pct_level,
             pip_size=self.config.pip_size,
-            tolerance_pips=3
+            tolerance_pips=3,
         )
 
         # ── Step 7: Build Entry Levels ────────────────────────────────────────
@@ -416,16 +416,16 @@ class BreakoutRetestEngine:
         # fraction of the actual OB range, producing absurdly tight stops and
         # inflated R:R. Using max(ob_height, pip_buffer) fixes this for all
         # instruments without changing forex behaviour (where ob_height ≈ pip_buffer).
-        ob_height      = ob.top - ob.bottom
-        pip_buffer     = self.config.sweep_wick_pips * self.config.pip_size
-        min_sl_dist    = max(ob_height, pip_buffer)
+        ob_height = ob.top - ob.bottom
+        pip_buffer = self.config.sweep_wick_pips * self.config.pip_size
+        min_sl_dist = max(ob_height, pip_buffer)
 
         if direction == Direction.BEARISH:
-            entry_price = ob.top       # Limit short at TOP of OB
-            stop_loss   = ob.top + min_sl_dist
+            entry_price = ob.top  # Limit short at TOP of OB
+            stop_loss = ob.top + min_sl_dist
         else:
-            entry_price = ob.bottom    # Limit long at BOTTOM of OB
-            stop_loss   = ob.bottom - min_sl_dist
+            entry_price = ob.bottom  # Limit long at BOTTOM of OB
+            stop_loss = ob.bottom - min_sl_dist
 
         # Notes
         fvg_note = "FVG present at displacement" if fvg else "No FVG — OB only"
@@ -459,7 +459,7 @@ class BreakoutRetestEngine:
             stop_loss=stop_loss,
             retest_index=retest_index,
             valid=True,
-            notes=notes
+            notes=notes,
         )
 
     def to_pattern_result(self, result: BreakoutRetestResult):
@@ -468,14 +468,23 @@ class BreakoutRetestEngine:
         so it can feed into the existing signal_generator without changes.
         """
         from ..patterns.pattern_engine import PatternResult
+
         return PatternResult(
             pattern_name=result.pattern_name,
             direction=result.direction,
-            neckline=result.wedge_low if result.direction == Direction.BEARISH else result.wedge_high,
-            sweep_level=result.channel_high if result.direction == Direction.BEARISH else result.channel_low,
+            neckline=(
+                result.wedge_low
+                if result.direction == Direction.BEARISH
+                else result.wedge_high
+            ),
+            sweep_level=(
+                result.channel_high
+                if result.direction == Direction.BEARISH
+                else result.channel_low
+            ),
             sweep_candle_index=result.wedge_breakout_index,
             bos_candle_index=result.wedge_breakout_index,
             fvg=result.fvg,
             valid=result.valid,
-            notes=result.notes
+            notes=result.notes,
         )

@@ -6,8 +6,12 @@ All rules derived from Ntando's SMC framework.
 
 from typing import List, Optional, Tuple
 from ..core.structures import (
-    Candle, SwingPoint, MarketStructure, StructureType,
-    BiasType, Direction, LiquiditySweep
+    Candle,
+    SwingPoint,
+    StructureType,
+    BiasType,
+    Direction,
+    LiquiditySweep,
 )
 from ..config.pairs import PairConfig
 
@@ -21,7 +25,9 @@ class StructureEngine:
     # SWING DETECTION
     # ─────────────────────────────────────────────
 
-    def detect_swings(self, candles: List[Candle], left: int = 3, right: int = 3) -> List[SwingPoint]:
+    def detect_swings(
+        self, candles: List[Candle], left: int = 3, right: int = 3
+    ) -> List[SwingPoint]:
         """
         Detect swing highs and lows using a left/right lookback pivot method.
         A swing high: highest high with `left` lower highs before and `right` lower highs after.
@@ -33,25 +39,37 @@ class StructureEngine:
             c = candles[i]
 
             # Swing high check
-            is_swing_high = all(candles[i].high >= candles[i - j].high for j in range(1, left + 1)) and \
-                            all(candles[i].high >= candles[i + j].high for j in range(1, right + 1))
+            is_swing_high = all(
+                candles[i].high >= candles[i - j].high for j in range(1, left + 1)
+            ) and all(
+                candles[i].high >= candles[i + j].high for j in range(1, right + 1)
+            )
 
             # Swing low check
-            is_swing_low = all(candles[i].low <= candles[i - j].low for j in range(1, left + 1)) and \
-                           all(candles[i].low <= candles[i + j].low for j in range(1, right + 1))
+            is_swing_low = all(
+                candles[i].low <= candles[i - j].low for j in range(1, left + 1)
+            ) and all(candles[i].low <= candles[i + j].low for j in range(1, right + 1))
 
             if is_swing_high:
                 swing_type = self._classify_high(c.high, swings)
-                swings.append(SwingPoint(candle=c, swing_type=swing_type, level=c.high, index=i))
+                swings.append(
+                    SwingPoint(candle=c, swing_type=swing_type, level=c.high, index=i)
+                )
 
             elif is_swing_low:
                 swing_type = self._classify_low(c.low, swings)
-                swings.append(SwingPoint(candle=c, swing_type=swing_type, level=c.low, index=i))
+                swings.append(
+                    SwingPoint(candle=c, swing_type=swing_type, level=c.low, index=i)
+                )
 
         return swings
 
     def _classify_high(self, level: float, existing: List[SwingPoint]) -> StructureType:
-        prev_highs = [s for s in existing if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
+        prev_highs = [
+            s
+            for s in existing
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
         if not prev_highs:
             return StructureType.HH
         last = prev_highs[-1].level
@@ -61,7 +79,11 @@ class StructureEngine:
         return StructureType.HH if level > last else StructureType.LH
 
     def _classify_low(self, level: float, existing: List[SwingPoint]) -> StructureType:
-        prev_lows = [s for s in existing if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
+        prev_lows = [
+            s
+            for s in existing
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
         if not prev_lows:
             return StructureType.HL
         last = prev_lows[-1].level
@@ -84,14 +106,24 @@ class StructureEngine:
             return BiasType.RANGING
 
         recent = swings[-4:]
-        highs = [s for s in recent if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)]
-        lows  = [s for s in recent if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)]
+        highs = [
+            s
+            for s in recent
+            if s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)
+        ]
+        lows = [
+            s
+            for s in recent
+            if s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL)
+        ]
 
-        bullish_count = sum(1 for s in highs if s.swing_type == StructureType.HH) + \
-                        sum(1 for s in lows  if s.swing_type == StructureType.HL)
+        bullish_count = sum(1 for s in highs if s.swing_type == StructureType.HH) + sum(
+            1 for s in lows if s.swing_type == StructureType.HL
+        )
 
-        bearish_count = sum(1 for s in highs if s.swing_type == StructureType.LH) + \
-                        sum(1 for s in lows  if s.swing_type == StructureType.LL)
+        bearish_count = sum(1 for s in highs if s.swing_type == StructureType.LH) + sum(
+            1 for s in lows if s.swing_type == StructureType.LL
+        )
 
         if bullish_count > bearish_count:
             return BiasType.BULLISH
@@ -104,11 +136,7 @@ class StructureEngine:
     # ─────────────────────────────────────────────
 
     def detect_sweep(
-        self,
-        candles: List[Candle],
-        level: float,
-        direction: Direction,
-        index: int
+        self, candles: List[Candle], level: float, direction: Direction, index: int
     ) -> Optional[LiquiditySweep]:
         """
         A valid sweep:
@@ -129,7 +157,7 @@ class StructureEngine:
                     sweep_candle=c,
                     direction=direction,
                     wick_size=wick_through,
-                    body_rejected=body_rejected
+                    body_rejected=body_rejected,
                 )
 
         elif direction == Direction.BULLISH:
@@ -142,7 +170,7 @@ class StructureEngine:
                     sweep_candle=c,
                     direction=direction,
                     wick_size=wick_through,
-                    body_rejected=body_rejected
+                    body_rejected=body_rejected,
                 )
 
         return None
@@ -156,7 +184,7 @@ class StructureEngine:
         candles: List[Candle],
         neckline: float,
         direction: Direction,
-        start_index: int
+        start_index: int,
     ) -> Optional[Tuple[Candle, int]]:
         """
         BOS rule — Ntando's exact rule:
@@ -185,7 +213,7 @@ class StructureEngine:
         candles: List[Candle],
         bias: BiasType,
         swing_level: float,
-        start_index: int
+        start_index: int,
     ) -> Optional[Tuple[Candle, int]]:
         """
         iCHoCH — internal character change within the swing.
@@ -196,8 +224,10 @@ class StructureEngine:
         return self.detect_bos(
             candles=candles,
             neckline=swing_level,
-            direction=Direction.BEARISH if bias == BiasType.BEARISH else Direction.BULLISH,
-            start_index=start_index
+            direction=(
+                Direction.BEARISH if bias == BiasType.BEARISH else Direction.BULLISH
+            ),
+            start_index=start_index,
         )
 
     # ─────────────────────────────────────────────
@@ -205,9 +235,7 @@ class StructureEngine:
     # ─────────────────────────────────────────────
 
     def find_equal_levels(
-        self,
-        swings: List[SwingPoint],
-        level_type: str = "high"
+        self, swings: List[SwingPoint], level_type: str = "high"
     ) -> List[Tuple[SwingPoint, SwingPoint]]:
         """
         Find pairs of swing points that form equal highs or equal lows.
@@ -216,9 +244,18 @@ class StructureEngine:
         """
         results = []
         relevant = [
-            s for s in swings
-            if (level_type == "high" and s.swing_type in (StructureType.HH, StructureType.LH, StructureType.EQH)) or
-               (level_type == "low"  and s.swing_type in (StructureType.HL, StructureType.LL, StructureType.EQL))
+            s
+            for s in swings
+            if (
+                level_type == "high"
+                and s.swing_type
+                in (StructureType.HH, StructureType.LH, StructureType.EQH)
+            )
+            or (
+                level_type == "low"
+                and s.swing_type
+                in (StructureType.HL, StructureType.LL, StructureType.EQL)
+            )
         ]
 
         tolerance = self.config.peak_equality_pips * self.config.pip_size

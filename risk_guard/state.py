@@ -29,7 +29,8 @@ class RiskGuardState:
 
     def _init_db(self):
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS session_state (
                     id                          INTEGER PRIMARY KEY AUTOINCREMENT,
                     firm                        TEXT    NOT NULL,
@@ -47,8 +48,10 @@ class RiskGuardState:
                     last_updated                TEXT    NOT NULL,
                     UNIQUE(firm, session_date)
                 )
-            """)
-            conn.execute("""
+            """
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS session_log (
                     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
                     firm                   TEXT    NOT NULL,
@@ -60,7 +63,8 @@ class RiskGuardState:
                     equity_high            REAL    NOT NULL,
                     logged_at              TEXT    NOT NULL
                 )
-            """)
+            """
+            )
             conn.commit()
 
     # ─────────────────────────────────────────────
@@ -158,13 +162,19 @@ class RiskGuardState:
                 last_updated                = excluded.last_updated
             """,
             (
-                state.firm, state.session_date,
-                state.account_size, state.starting_balance,
-                state.equity_high, state.daily_pnl,
-                state.trades_today, state.valid_trading_days,
-                int(state.session_locked), state.revenge_locked_until,
+                state.firm,
+                state.session_date,
+                state.account_size,
+                state.starting_balance,
+                state.equity_high,
+                state.daily_pnl,
+                state.trades_today,
+                state.valid_trading_days,
+                int(state.session_locked),
+                state.revenge_locked_until,
                 int(state.session_ended_via_hard_stop),
-                state.cumulative_pnl, state.last_updated,
+                state.cumulative_pnl,
+                state.last_updated,
             ),
         )
         conn.commit()
@@ -184,10 +194,14 @@ class RiskGuardState:
                 ) VALUES (?,?,?,?,?,?,?,?)
                 """,
                 (
-                    state.firm, state.session_date,
-                    state.daily_pnl, state.trades_today,
-                    int(was_valid_day), int(state.session_ended_via_hard_stop),
-                    state.equity_high, datetime.utcnow().isoformat(),
+                    state.firm,
+                    state.session_date,
+                    state.daily_pnl,
+                    state.trades_today,
+                    int(was_valid_day),
+                    int(state.session_ended_via_hard_stop),
+                    state.equity_high,
+                    datetime.utcnow().isoformat(),
                 ),
             )
             conn.commit()
@@ -219,9 +233,8 @@ class RiskGuardState:
         Sets revenge_locked_until if session ended via hard stop.
         """
         # Determine valid-day status for the session being closed
-        was_valid = (
-            config.min_valid_day_pct == 0.0
-            or state.daily_pnl >= (config.min_valid_day_pct / 100.0 * state.account_size)
+        was_valid = config.min_valid_day_pct == 0.0 or state.daily_pnl >= (
+            config.min_valid_day_pct / 100.0 * state.account_size
         )
 
         self.save(state)

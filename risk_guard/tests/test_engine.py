@@ -15,7 +15,10 @@ from datetime import datetime, date
 
 from risk_guard.engine import RiskGuardEngine
 from risk_guard.models import (
-    DecisionStatus, FirmConfig, TradeProposal, SessionState,
+    DecisionStatus,
+    FirmConfig,
+    TradeProposal,
+    SessionState,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -73,11 +76,11 @@ def _proposal(**overrides) -> TradeProposal:
     base = TradeProposal(
         firm="TEST",
         account_size=ACCOUNT,
-        proposed_risk_dollars=50.0,     # 0.5% of 10k — safe
+        proposed_risk_dollars=50.0,  # 0.5% of 10k — safe
         current_daily_pnl=0.0,
         open_risk_dollars=0.0,
         trades_today=0,
-        estimated_hold_minutes=60.0,    # 60 min — above 2-min minimum
+        estimated_hold_minutes=60.0,  # 60 min — above 2-min minimum
     )
     for k, v in overrides.items():
         setattr(base, k, v)
@@ -91,9 +94,10 @@ ENGINE = RiskGuardEngine()
 # FENCE 1 TESTS
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_f1_session_locked_blocks():
     """Check 1: session_locked=True → BLOCK regardless of anything else."""
-    state    = _state(session_locked=True)
+    state = _state(session_locked=True)
     decision = ENGINE.fence1_pre_trade(_config(), _proposal(), state)
 
     assert decision.status == DecisionStatus.BLOCK
@@ -106,20 +110,18 @@ def test_f1_hard_stop_blocks_and_locks_session():
     Check 2: current_daily_pnl <= -hard_stop_dollars → BLOCK
     AND state.session_locked is set to True.
     """
-    config   = _config()
-    state    = _state()
-    hard_dol = config.internal_hard_stop_pct / 100 * ACCOUNT   # 375.0
-    proposal = _proposal(current_daily_pnl=-hard_dol)          # exactly at limit
+    config = _config()
+    state = _state()
+    hard_dol = config.internal_hard_stop_pct / 100 * ACCOUNT  # 375.0
+    proposal = _proposal(current_daily_pnl=-hard_dol)  # exactly at limit
 
     decision = ENGINE.fence1_pre_trade(config, proposal, state)
 
     assert decision.status == DecisionStatus.BLOCK
-    assert state.session_locked is True,  "Hard stop must lock the session"
+    assert state.session_locked is True, "Hard stop must lock the session"
     assert state.session_ended_via_hard_stop is True
     assert "hard stop" in decision.reason.lower()
-    print(
-        f"PASS — hard stop hit (${hard_dol}) → BLOCK | session_locked=True"
-    )
+    print(f"PASS — hard stop hit (${hard_dol}) → BLOCK | session_locked=True")
 
 
 def test_f1_soft_stop_warns_and_halves_risk():
@@ -127,18 +129,22 @@ def test_f1_soft_stop_warns_and_halves_risk():
     Check 3: current_daily_pnl <= -soft_stop_dollars → WARN
     AND adjusted_risk_dollars == proposed / 2.
     """
-    config    = _config()
-    soft_dol  = config.internal_soft_stop_pct / 100 * ACCOUNT  # 250.0
-    proposed  = 100.0
-    proposal  = _proposal(
-        current_daily_pnl=-soft_dol,   # exactly at soft stop
+    config = _config()
+    soft_dol = config.internal_soft_stop_pct / 100 * ACCOUNT  # 250.0
+    proposed = 100.0
+    _proposal_obj = _proposal(
+        current_daily_pnl=-soft_dol,  # exactly at soft stop
         proposed_risk_dollars=proposed,
     )
 
-    decision = ENGINE.fence1_pre_trade(config, _proposal(
-        current_daily_pnl=-soft_dol,
-        proposed_risk_dollars=proposed,
-    ), _state())
+    decision = ENGINE.fence1_pre_trade(
+        config,
+        _proposal(
+            current_daily_pnl=-soft_dol,
+            proposed_risk_dollars=proposed,
+        ),
+        _state(),
+    )
 
     assert decision.status == DecisionStatus.WARN
     assert decision.adjusted_risk_dollars == proposed / 2
@@ -155,26 +161,26 @@ def test_f1_open_risk_ceiling_blocks():
     With 0 daily pnl (no soft stop), adjusted == proposed.
     $100 open + $60 proposed = $160 > max $150.
     """
-    config   = _config()
+    config = _config()
     proposal = _proposal(
         open_risk_dollars=100.0,
-        proposed_risk_dollars=60.0,     # 100 + 60 = 160 > 150
+        proposed_risk_dollars=60.0,  # 100 + 60 = 160 > 150
     )
     decision = ENGINE.fence1_pre_trade(config, proposal, _state())
 
     assert decision.status == DecisionStatus.BLOCK
-    assert "ceiling" in decision.reason.lower() or "open risk" in decision.reason.lower()
-    print(
-        f"PASS — open risk ceiling → BLOCK | reason: {decision.reason[:70]}"
+    assert (
+        "ceiling" in decision.reason.lower() or "open risk" in decision.reason.lower()
     )
+    print(f"PASS — open risk ceiling → BLOCK | reason: {decision.reason[:70]}")
 
 
 def test_f1_max_trades_blocks():
     """
     Check 5: trades_today >= max_trades_per_day → BLOCK.
     """
-    config   = _config()
-    state    = _state(trades_today=config.max_trades_per_day)  # 3/3
+    config = _config()
+    state = _state(trades_today=config.max_trades_per_day)  # 3/3
     decision = ENGINE.fence1_pre_trade(config, _proposal(), state)
 
     assert decision.status == DecisionStatus.BLOCK
@@ -190,21 +196,20 @@ def test_f1_short_hold_time_warns():
     Check 6: estimated_hold_minutes < min_hold_seconds/60 → WARN.
     min_hold_seconds=120 → minimum 2 minutes; estimated=1 → WARN.
     """
-    config   = _config()     # min_hold_seconds = 120 → 2 min
-    proposal = _proposal(estimated_hold_minutes=1.0)   # 1 min < 2 min
+    config = _config()  # min_hold_seconds = 120 → 2 min
+    proposal = _proposal(estimated_hold_minutes=1.0)  # 1 min < 2 min
     decision = ENGINE.fence1_pre_trade(config, proposal, _state())
 
     assert decision.status == DecisionStatus.WARN
     assert "hold" in decision.reason.lower()
     print(
-        f"PASS — hold time 1m < 2m minimum → WARN | "
-        f"reason: {decision.reason[:70]}"
+        f"PASS — hold time 1m < 2m minimum → WARN | " f"reason: {decision.reason[:70]}"
     )
 
 
 def test_f1_all_clear():
     """Nominal path: no limits hit → CLEAR."""
-    config   = _config()
+    config = _config()
     decision = ENGINE.fence1_pre_trade(config, _proposal(), _state())
 
     assert decision.status == DecisionStatus.CLEAR
@@ -222,12 +227,12 @@ def test_f1_soft_stop_and_hold_time_combined():
     proposal = _proposal(
         current_daily_pnl=-soft_dol,
         proposed_risk_dollars=100.0,
-        estimated_hold_minutes=1.0,   # below 2-min min
+        estimated_hold_minutes=1.0,  # below 2-min min
     )
     decision = ENGINE.fence1_pre_trade(config, proposal, _state())
 
     assert decision.status == DecisionStatus.WARN
-    assert decision.adjusted_risk_dollars == 50.0   # 100 / 2
+    assert decision.adjusted_risk_dollars == 50.0  # 100 / 2
     # Reason must mention both issues
     reason_lower = decision.reason.lower()
     assert "soft stop" in reason_lower or "halved" in reason_lower
@@ -261,6 +266,7 @@ if __name__ == "__main__":
             passed += 1
         except Exception as exc:
             import traceback
+
             print(f"FAIL — {t.__name__}: {exc}")
             traceback.print_exc()
             failed += 1

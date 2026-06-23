@@ -10,18 +10,16 @@ MLEngine.analyse() produces real output without any pre-existing model.
 import os
 import tempfile
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from trader_copilot.core.structures import (
-    Candle, Direction, TradeSignal, BiasType
-)
+from trader_copilot.core.structures import Direction, TradeSignal
 from trader_copilot.ml.ml_engine import MLEngine
-from trader_copilot.config.pairs import PAIR_CONFIGS
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _make_signal(
     symbol="XAUUSD",
@@ -69,6 +67,7 @@ def _make_engine(symbol="XAUUSD", min_prob=0.0) -> MLEngine:
 # _signal_to_dict
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_signal_to_dict_produces_valid_feature_dict():
     """
     _signal_to_dict() must produce a dict with all keys required by
@@ -80,25 +79,36 @@ def test_signal_to_dict_produces_valid_feature_dict():
     result = engine._signal_to_dict(signal)
 
     required_keys = [
-        "symbol", "direction", "pattern", "confluence_score",
-        "fvg_present", "ob_present", "killzone_active",
-        "risk_reward", "signal_time", "session",
+        "symbol",
+        "direction",
+        "pattern",
+        "confluence_score",
+        "fvg_present",
+        "ob_present",
+        "killzone_active",
+        "risk_reward",
+        "signal_time",
+        "session",
     ]
     for key in required_keys:
         assert key in result, f"Missing key in signal dict: {key}"
 
-    assert result["symbol"]    == "XAUUSD"
+    assert result["symbol"] == "XAUUSD"
     assert result["direction"] == "bearish"
-    assert result["pattern"]   == "Double Top"
+    assert result["pattern"] == "Double Top"
     assert result["confluence_score"] == 4
-    assert result["fvg_present"]      == 1
-    assert result["ob_present"]       == 1
-    assert result["killzone_active"]  == 1
+    assert result["fvg_present"] == 1
+    assert result["ob_present"] == 1
+    assert result["killzone_active"] == 1
     assert isinstance(result["risk_reward"], float)
     assert isinstance(result["signal_time"], str)
     assert result["session"] in (
-        "london", "london_open", "new_york", "new_york_open",
-        "london_ny_overlap_pre", "off_session"
+        "london",
+        "london_open",
+        "new_york",
+        "new_york_open",
+        "london_ny_overlap_pre",
+        "off_session",
     )
     print(f"PASS — _signal_to_dict: all keys present | session={result['session']}")
 
@@ -108,8 +118,9 @@ def test_signal_to_dict_session_new_york_open():
     engine = _make_engine()
     signal = _make_signal(ts=datetime(2024, 6, 1, 13, 30))
     result = engine._signal_to_dict(signal)
-    assert result["session"] == "new_york_open", \
-        f"Expected 'new_york_open', got '{result['session']}'"
+    assert (
+        result["session"] == "new_york_open"
+    ), f"Expected 'new_york_open', got '{result['session']}'"
     print("PASS — _signal_to_dict session: new_york_open at 13:30 UTC")
 
 
@@ -118,8 +129,9 @@ def test_signal_to_dict_session_london():
     engine = _make_engine()
     signal = _make_signal(ts=datetime(2024, 6, 1, 8, 0))
     result = engine._signal_to_dict(signal)
-    assert result["session"] == "london", \
-        f"Expected 'london', got '{result['session']}'"
+    assert (
+        result["session"] == "london"
+    ), f"Expected 'london', got '{result['session']}'"
     print("PASS — _signal_to_dict session: london at 08:00 UTC")
 
 
@@ -145,6 +157,7 @@ def test_signal_to_dict_does_not_require_live_db():
 # MLEngine.analyse()
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def test_analyse_returns_correct_structure_when_signal_produced():
     """
     When the core engine produces a signal, MLEngine.analyse() must return
@@ -161,15 +174,17 @@ def test_analyse_returns_correct_structure_when_signal_produced():
     assert result is not None, "Should return a result when signal is produced"
     signal, prediction = result
     assert isinstance(signal, TradeSignal), "First element must be a TradeSignal"
-    assert "win_probability"  in prediction
-    assert "confidence_tier"  in prediction
-    assert "action"           in prediction
-    assert "model_based"      in prediction
+    assert "win_probability" in prediction
+    assert "confidence_tier" in prediction
+    assert "action" in prediction
+    assert "model_based" in prediction
     assert 0.0 <= prediction["win_probability"] <= 1.0
     assert prediction["confidence_tier"] in ("PREMIUM", "HIGH", "MEDIUM", "LOW")
-    assert prediction["model_based"] == False, "No model file — should be rule-based"
-    print(f"PASS — analyse() structure | prob={prediction['win_probability']:.2f} | "
-          f"tier={prediction['confidence_tier']}")
+    assert prediction["model_based"] is False, "No model file — should be rule-based"
+    print(
+        f"PASS — analyse() structure | prob={prediction['win_probability']:.2f} | "
+        f"tier={prediction['confidence_tier']}"
+    )
 
 
 def test_analyse_returns_none_when_no_signal():
@@ -197,13 +212,16 @@ def test_analyse_filters_by_min_probability():
     result = engine.analyse(candles_htf=[], candles_ltf=[])
 
     # Rule-based: score=1 → prob ≈ 0.40+0.09 = 0.49 — well below 0.99
-    assert result is None, "Low-probability signal should be filtered by min_probability"
+    assert (
+        result is None
+    ), "Low-probability signal should be filtered by min_probability"
     print("PASS — analyse() filters signal below min_probability threshold")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MLEngine.run()
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def test_run_returns_none_and_does_not_alert_when_no_signal():
     """
@@ -239,7 +257,9 @@ def test_run_calls_alert_when_signal_above_threshold():
 
     call_args = engine.alert.call_args[0]
     assert call_args[0] is fake_signal, "alert() should receive the TradeSignal"
-    assert "win_probability" in call_args[1], "alert() should receive the prediction dict"
+    assert (
+        "win_probability" in call_args[1]
+    ), "alert() should receive the prediction dict"
     print("PASS — run() calls alert() exactly once with signal + prediction")
 
 
@@ -288,6 +308,7 @@ if __name__ == "__main__":
             passed += 1
         except Exception as e:
             import traceback
+
             print(f"FAIL — {test.__name__}: {e}")
             traceback.print_exc()
             failed += 1
