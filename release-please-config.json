@@ -1,0 +1,18 @@
+{
+  "release-type": "python",
+  "packages": {
+    ".": {}
+  },
+  "changelog-sections": [
+    { "type": "feat",     "section": "Features"          },
+    { "type": "fix",      "section": "Bug Fixes"         },
+    { "type": "perf",     "section": "Performance"       },
+    { "type": "refactor", "section": "Code Refactoring"  },
+    { "type": "ci",       "section": "CI/CD"             },
+    { "type": "docs",     "section": "Documentation"     },
+    { "type": "chore",    "hidden": true                 },
+    { "type": "style",    "hidden": true                 },
+    { "type": "test",     "hidden": true                 },
+    { "type": "build",    "hidden": true                 }
+  ]
+}
