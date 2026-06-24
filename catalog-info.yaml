@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: genuvia-edge
+  description: Trading intelligence backend with SMC/ICT signal pipeline
+  tags:
+    - python
+    - trading
+    - fastapi
+    - railway
+  links:
+    - url: https://github.com/Sekani-27/genuvia-edge
+      title: GitHub
+      icon: github
+spec:
+  type: service
+  lifecycle: production
+  owner: user:ntando-miya
+  system: genuvia
