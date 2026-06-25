@@ -3,13 +3,16 @@ kind: Component
 metadata:
   name: genuvia-edge
   description: Trading intelligence backend with SMC/ICT signal pipeline
+  annotations:
+    backstage.io/kubernetes-id: genuvia-edge
+    backstage.io/kubernetes-namespace: default
   tags:
     - python
     - trading
     - fastapi
     - railway
   links:
-    - url: https://github.com/Sekani-27/genuvia-edge
+    - url: https://github.com/Sekani-27/Nexara
       title: GitHub
       icon: github
 spec:
