@@ -6,6 +6,7 @@ metadata:
   annotations:
     backstage.io/kubernetes-id: genuvia-edge
     backstage.io/kubernetes-namespace: default
+    argocd/app-name: genuvia-edge
   tags:
     - python
     - trading
